@@ -1,0 +1,48 @@
+{
+  // Fotogrammi al secondo inviati alla tastiera (5-40)
+  "Fps": 20,
+
+  // Luminosita' globale (0.05 - 1.0), saturazione (1 = originale) e gamma (piu' alto = colori piu' profondi)
+  "Brightness": 1.0,
+  "Saturation": 1.25,
+  "Gamma": 1.4,
+
+  // Quanto la finestra attiva influenza i colori: 0 = mai, 0.28 = lieve, 0.85 = forte, 1 = totale
+  "WindowInfluence": 0.85,
+
+  // Onda che parte dal centro quando cambi finestra: durata in secondi, larghezza del fronte, bagliore
+  "WaveSeconds": 2.2,
+  "WaveBand": 0.35,
+  "WaveGlow": 0.25,
+
+  // Stile dell'onda: "smooth" = dissolvenza morbida con bagliore (come prima)
+  //                  "barrier" = fronte netto: una fascia di tasti spenti attraversa la tastiera dal centro,
+  //                              dietro di essa compaiono subito i nuovi colori. BarrierWidth = spessore della fascia.
+  "WaveStyle": "barrier",
+  "BarrierWidth": 0.14,
+
+  // Fluidita': secondi con cui i colori della finestra vengono inseguiti (0 = subito, 1.2 = fluido, 3+ = molto lento)
+  "WindowFollowSeconds": 1.2,
+
+  // Moto dello sfondo sulla tastiera: velocita' (0 = fermo), sfarfallio tra tasti, onde casuali di luce (secondi medi, 0 = mai)
+  "DriftSpeed": 1.0,
+  "Shimmer": 0.10,
+  "RandomRippleEverySeconds": 8,
+
+  // La finestra influenza solo i pixel che hanno davvero colore. Neri, grigi e bianchi vengono ignorati.
+  // Alza ChromaThreshold per ignorare anche colori poco saturi.
+  "ChromaThreshold": 0.14,
+  "ValueThreshold": 0.12,
+
+  // Ogni quanti millisecondi viene letta la finestra attiva
+  "WindowSampleMs": 250,
+
+  // Ogni quanti secondi si controlla se lo sfondo del desktop e' cambiato
+  "WallpaperRecheckSeconds": 10,
+
+  // Immagine da usare al posto dello sfondo di Windows (percorso completo, vuoto = sfondo del desktop)
+  "WallpaperOverride": "",
+
+  // Profilo Spectrum da usare (0 = quello attivo sulla tastiera in questo momento)
+  "Profile": 0
+}
