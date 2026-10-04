@@ -5,8 +5,8 @@
 **Your desktop wallpaper, flowing across your Lenovo Legion keyboard.**<br>
 Dynamic per-key RGB lighting with a Razer-Chroma-style control panel — no Lenovo Vantage, no cloud, no dependencies.
 
-[![build](https://img.shields.io/github/actions/workflow/status/ProgMarc/LegionChromaFlow/build.yml?branch=main&style=flat-square&label=build)](https://github.com/ProgMarc/LegionChromaFlow/actions)
-[![release](https://img.shields.io/github/v/release/ProgMarc/LegionChromaFlow?style=flat-square)](https://github.com/ProgMarc/LegionChromaFlow/releases)
+[![build](https://img.shields.io/github/actions/workflow/status/MarcoGigante/LegionChromaFlow/build.yml?branch=main&style=flat-square&label=build)](https://github.com/MarcoGigante/LegionChromaFlow/actions)
+[![release](https://img.shields.io/github/v/release/MarcoGigante/LegionChromaFlow?style=flat-square)](https://github.com/MarcoGigante/LegionChromaFlow/releases)
 [![license](https://img.shields.io/badge/license-GPL--3.0-44d62c?style=flat-square)](LICENSE)
 ![platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078d4?style=flat-square)
 ![.NET](https://img.shields.io/badge/.NET-8%2B-512bd4?style=flat-square)
