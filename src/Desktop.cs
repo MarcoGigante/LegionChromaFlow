@@ -3,10 +3,10 @@ using System.Text;
 
 namespace LegionChromaFlow;
 
-/// <summary>Lettura dello sfondo del desktop (GDI+ flat API) e campionamento della finestra attiva (GDI).</summary>
+/// <summary>Reads the desktop wallpaper (GDI+ flat API) and samples the active window (GDI).</summary>
 internal static class Desktop
 {
-    // ------------------------------------------------------------------ Sfondo
+    // ------------------------------------------------------------------ Wallpaper
 
     private static IntPtr _gdipToken;
 
@@ -25,7 +25,7 @@ internal static class Desktop
             : null;
     }
 
-    /// <summary>Carica un'immagine e la riduce (media a blocchi) a outW x outH, canali RGB in 0..1.</summary>
+    /// <summary>Loads an image and downsamples it (block average) to outW x outH, RGB channels in 0..1.</summary>
     public static Field? LoadImage(string path, int outW = 160, int outH = 90)
     {
         if (!File.Exists(path) || !EnsureGdip())
@@ -84,7 +84,7 @@ internal static class Desktop
         }
         catch (Exception ex)
         {
-            Log.Warn($"Lettura sfondo fallita: {ex.Message}");
+            Log.Warn($"Reading the wallpaper failed: {ex.Message}");
             return null;
         }
         finally
@@ -93,7 +93,7 @@ internal static class Desktop
         }
     }
 
-    // ------------------------------------------------------------ Finestra attiva
+    // ------------------------------------------------------------ Active window
 
     public enum WindowKind { Normal, Desktop, Ignore }
 
@@ -117,7 +117,7 @@ internal static class Desktop
         try { SetProcessDPIAware(); } catch { }
     }
 
-    /// <summary>Descrive la finestra in primo piano (senza catturarne i pixel).</summary>
+    /// <summary>Describes the foreground window (without capturing its pixels).</summary>
     public static WindowInfo GetForeground()
     {
         var h = GetForegroundWindow();
@@ -147,8 +147,8 @@ internal static class Desktop
     private const int CapW = 64, CapH = 36;
 
     /// <summary>
-    /// Cattura i pixel della finestra (ridotti a 64x36) e restituisce un Field a 4 canali
-    /// premoltiplicati: (r*w, g*w, b*w, w), dove w e' il "peso colore" del pixel (0 per nero/grigio/bianco).
+    /// Captures the window pixels (downscaled to 64x36) and returns a 4-channel Field
+    /// premultiplied: (r*w, g*w, b*w, w), where w is the pixel's "color weight" (0 for black/gray/white).
     /// </summary>
     public static Field? CaptureWindow(long handle, double chromaThr, double valueThr)
     {
@@ -156,7 +156,7 @@ internal static class Desktop
         if (!GetWindowRect(hwnd, out var r))
             return null;
 
-        // Limita la finestra allo schermo virtuale (le finestre massimizzate sporgono di qualche pixel).
+        // Clamp the window to the virtual screen (maximized windows overhang by a few pixels).
         var vx = GetSystemMetrics(76); var vy = GetSystemMetrics(77);
         var vw = GetSystemMetrics(78); var vh = GetSystemMetrics(79);
         var left = Math.Max(r.Left, vx); var top = Math.Max(r.Top, vy);
@@ -217,7 +217,7 @@ internal static class Desktop
         }
     }
 
-    /// <summary>0 per pixel neri/grigi/bianchi (nessun "colore"), fino a 1 per colori vivi e luminosi.</summary>
+    /// <summary>0 for black/gray/white pixels (no "color"), up to 1 for vivid, bright colors.</summary>
     public static float ColorWeight(float r, float g, float b, float chromaThr, float valueThr)
     {
         var max = Math.Max(r, Math.Max(g, b));

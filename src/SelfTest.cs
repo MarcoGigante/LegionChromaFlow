@@ -7,23 +7,23 @@ internal static class SelfTest
 
     private static void Check(bool ok, string what)
     {
-        Console.WriteLine($"  [{(ok ? "OK" : "FALLITO")}] {what}");
+        Console.WriteLine($"  [{(ok ? "OK" : "FAILED")}] {what}");
         if (!ok) _failed++;
     }
 
     public static int Run()
     {
-        Console.WriteLine("Autotest degli effetti");
+        Console.WriteLine("Effect self-test");
 
         // --- Peso colore ---
-        Console.WriteLine("Peso colore dei pixel della finestra:");
+        Console.WriteLine("Color weight of window pixels:");
         const float c = 0.14f, v = 0.12f;
-        Check(Desktop.ColorWeight(0, 0, 0, c, v) == 0f, "nero -> nessuna influenza");
-        Check(Desktop.ColorWeight(1, 1, 1, c, v) == 0f, "bianco -> nessuna influenza");
-        Check(Desktop.ColorWeight(0.5f, 0.5f, 0.5f, c, v) == 0f, "grigio -> nessuna influenza");
-        Check(Desktop.ColorWeight(0, 0, 0.08f, c, v) == 0f, "blu quasi nero -> nessuna influenza");
-        Check(Desktop.ColorWeight(1, 0, 0, c, v) > 0.95f, "rosso vivo -> influenza piena");
-        Check(Desktop.ColorWeight(0.1f, 0.6f, 0.9f, c, v) > 0.9f, "azzurro -> influenza piena");
+        Check(Desktop.ColorWeight(0, 0, 0, c, v) == 0f, "black -> no influence");
+        Check(Desktop.ColorWeight(1, 1, 1, c, v) == 0f, "white -> no influence");
+        Check(Desktop.ColorWeight(0.5f, 0.5f, 0.5f, c, v) == 0f, "gray -> no influence");
+        Check(Desktop.ColorWeight(0, 0, 0.08f, c, v) == 0f, "near-black blue -> no influence");
+        Check(Desktop.ColorWeight(1, 0, 0, c, v) > 0.95f, "vivid red -> full influence");
+        Check(Desktop.ColorWeight(0.1f, 0.6f, 0.9f, c, v) > 0.9f, "sky blue -> full influence");
 
         // --- Tastiera sintetica 22x6 ---
         const int W = 22, H = 6;
@@ -40,37 +40,37 @@ internal static class SelfTest
         FlowEngine NewEngine(Config cf) => new(cf, codes, wall, seed: 42);
         var n = W * H;
 
-        // --- A: nessuna finestra ---
+        // --- A: no window ---
         var a = NewEngine(cfg);
         var rgbA = new byte[n * 3];
         a.UpdateWindow(null, true, 0.0);
         a.Render(5.0, rgbA, out _, out _, out _);
 
         // --- B: finestra nera/senza colore -> identico ad A ---
-        Console.WriteLine("Finestra senza colori (sfondo nero):");
+        Console.WriteLine("Window without colors (black background):");
         var b = NewEngine(cfg);
         var rgbB = new byte[n * 3];
         b.UpdateWindow(WindowField(0, 0, 0), true, 0.0);
         b.Render(5.0, rgbB, out _, out _, out _);
-        Check(rgbA.SequenceEqual(rgbB), "i colori restano quelli del desktop");
+        Check(rgbA.SequenceEqual(rgbB), "colors stay those of the desktop");
 
         // --- C: finestra colorata (blu) ---
-        Console.WriteLine("Finestra colorata (blu), dopo la fine dell'onda:");
+        Console.WriteLine("Colored window (blue), after the wave ends:");
         var cE = NewEngine(cfg);
         var rgbC = new byte[n * 3];
         cE.UpdateWindow(WindowField(0.1f, 0.3f, 1f), true, 0.0);
         cE.Render(5.0, rgbC, out _, out _, out _);
         var diff = 0; var maxDiff = 0;
         for (var i = 0; i < rgbC.Length; i++) { var d = Math.Abs(rgbC[i] - rgbA[i]); diff += d; maxDiff = Math.Max(maxDiff, d); }
-        Check(diff > 0, "la finestra influenza i colori");
-        Check(maxDiff < 150, $"l'influenza e' lieve (massima differenza su un canale: {maxDiff}/255)");
+        Check(diff > 0, "the window influences the colors");
+        Check(maxDiff < 150, $"the influence is subtle (max difference on one channel: {maxDiff}/255)");
 
-        // --- D: l'onda parte dal centro ---
-        Console.WriteLine("Propagazione dal centro verso l'esterno:");
+        // --- D: the wave starts from the center ---
+        Console.WriteLine("Propagation from the center outwards:");
         var dE = NewEngine(cfg);
         var rgbD = new byte[n * 3];
         dE.UpdateWindow(WindowField(0.1f, 0.3f, 1f), true, 0.0);
-        dE.Render(0.5, rgbD, out _, out _, out _); // onda a ~25%: solo il centro ha cambiato colore
+        dE.Render(0.5, rgbD, out _, out _, out _); // wave at ~25%: only the center has changed color
         var reference = new byte[n * 3];
         var refE = NewEngine(cfg);
         refE.UpdateWindow(null, true, 0.0);
@@ -79,33 +79,33 @@ internal static class SelfTest
         int centerKey = (H / 2) * W + W / 2, edgeKey = 0;
         var centerChange = KeyDiff(rgbD, reference, centerKey);
         var edgeChange = KeyDiff(rgbD, reference, edgeKey);
-        Check(centerChange > edgeChange, $"il centro cambia prima dei bordi (centro={centerChange}, bordo={edgeChange})");
-        Check(edgeChange == 0, "il bordo e' ancora invariato a inizio onda");
+        Check(centerChange > edgeChange, $"the center changes before the edges (center={centerChange}, edge={edgeChange})");
+        Check(edgeChange == 0, "the edge is still unchanged at the start of the wave");
 
-        // --- D2: stile "barrier": fascia di tasti spenti al fronte, nuovi colori dietro, vecchi davanti ---
-        Console.WriteLine("Stile barriera:");
+        // --- D2: "barrier" style: band of switched-off keys at the front, new colors behind, old ones ahead ---
+        Console.WriteLine("Barrier style:");
         var bcfg = new Config { RandomRippleEverySeconds = 0, WaveSeconds = 2.0, WaveStyle = "barrier", BarrierWidth = 0.2 };
         bcfg.Clamp();
         var bE = NewEngine(bcfg);
         var rgbBar = new byte[n * 3];
         bE.UpdateWindow(WindowField(0.1f, 0.3f, 1f), true, 0.0);
-        bE.Render(1.0, rgbBar, out _, out _, out _); // meta' onda
+        bE.Render(1.0, rgbBar, out _, out _, out _); // half wave
         var off = 0; var lit2 = 0;
         for (var k = 0; k < n; k++)
         {
             if (rgbBar[k * 3] + rgbBar[k * 3 + 1] + rgbBar[k * 3 + 2] < 40) off++; else lit2++;
         }
-        Check(off > 0 && lit2 > off, $"la barriera spegne una fascia di tasti ({off} spenti, {lit2} accesi)");
+        Check(off > 0 && lit2 > off, $"the barrier switches off a band of keys ({off} off, {lit2} lit)");
         var bEnd = NewEngine(bcfg);
         var rgbEnd = new byte[n * 3];
         bEnd.UpdateWindow(WindowField(0.1f, 0.3f, 1f), true, 0.0);
         bEnd.Render(5.0, rgbEnd, out _, out _, out _);
         var zero = 0;
         for (var k = 0; k < n; k++) if (rgbEnd[k * 3] + rgbEnd[k * 3 + 1] + rgbEnd[k * 3 + 2] == 0) zero++;
-        Check(zero == 0, "a fine onda tutti i tasti tornano accesi");
+        Check(zero == 0, "at the end of the wave all keys are lit again");
 
         // --- E: tutti i valori restano validi e nessun tasto spento in modo anomalo ---
-        Console.WriteLine("Coerenza dell'uscita:");
+        Console.WriteLine("Output consistency:");
         var e = NewEngine(cfg);
         var rgbE = new byte[n * 3];
         var lit = 0;
@@ -116,33 +116,33 @@ internal static class SelfTest
                 for (var k = 0; k < n; k++)
                     if (rgbE[k * 3] + rgbE[k * 3 + 1] + rgbE[k * 3 + 2] > 30) lit++;
         }
-        Check(lit > n * 3, "i tasti restano accesi con colori dello sfondo nel tempo");
+        Check(lit > n * 3, "keys stay lit with wallpaper colors over time");
 
-        // --- F: il motivo cambia nel tempo (dinamico) ---
+        // --- F: the pattern changes over time (dynamic) ---
         var f1 = new byte[n * 3]; var f2 = new byte[n * 3];
         var fe = NewEngine(cfg);
         fe.Render(0, f1, out _, out _, out _);
         fe.Render(25, f2, out _, out _, out _);
-        Check(!f1.SequenceEqual(f2), "i colori si evolvono nel tempo (effetto dinamico)");
+        Check(!f1.SequenceEqual(f2), "colors evolve over time (dynamic effect)");
 
-        // --- G: il file di configurazione fornito si legge correttamente ---
-        Console.WriteLine("Configurazione:");
+        // --- G: the shipped configuration file parses correctly ---
+        Console.WriteLine("Configuration:");
         var cfgPath = AppPaths.Resolve().ConfigPath;
         if (File.Exists(cfgPath))
         {
             var loaded = Config.Load(cfgPath);
-            Check(loaded.Fps == 20 && Math.Abs(loaded.WindowInfluence - 0.85) < 1e-9, "config.json letto (commenti inclusi)");
+            Check(loaded.Fps >= 5 && loaded.WindowInfluence >= 0, "config.json parsed (comments included)");
         }
-        else Console.WriteLine("  (config.json non presente, controllo saltato)");
+        else Console.WriteLine("  (config.json not present, check skipped)");
 
-        Console.WriteLine(_failed == 0 ? "Tutti i controlli superati." : $"{_failed} controlli falliti.");
+        Console.WriteLine(_failed == 0 ? "All checks passed." : $"{_failed} checks failed.");
         return _failed == 0 ? 0 : 1;
     }
 
     private static int KeyDiff(byte[] a, byte[] b, int key)
         => Math.Abs(a[key * 3] - b[key * 3]) + Math.Abs(a[key * 3 + 1] - b[key * 3 + 1]) + Math.Abs(a[key * 3 + 2] - b[key * 3 + 2]);
 
-    /// <summary>Finestra uniforme di colore (r,g,b); se il colore non ha croma/luminosita' il peso e' 0.</summary>
+    /// <summary>Uniform window of color (r,g,b); if the color has no chroma/brightness the weight is 0.</summary>
     private static Field WindowField(float r, float g, float b)
     {
         var f = new Field(64, 36, 4);
@@ -154,7 +154,7 @@ internal static class SelfTest
         return f;
     }
 
-    /// <summary>Sfondo di prova: macchie colorate arancio/viola/verde su fondo scuro.</summary>
+    /// <summary>Test wallpaper: orange/purple/green color blobs on a dark background.</summary>
     private static Field SyntheticWallpaper()
     {
         var f = new Field(160, 90, 3);

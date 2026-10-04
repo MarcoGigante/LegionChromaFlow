@@ -1,6 +1,6 @@
 namespace LegionChromaFlow;
 
-/// <summary>Immagine a bassa risoluzione con N canali float, campionabile con interpolazione bilineare.</summary>
+/// <summary>Low-resolution image with N float channels, sampled with bilinear interpolation.</summary>
 internal sealed class Field
 {
     public int W { get; }
@@ -21,7 +21,7 @@ internal sealed class Field
         return x > 1f ? 2f - x : x;
     }
 
-    /// <summary>Campiona in (u,v) normalizzati. mirror=true riflette i bordi (niente giunture), altrimenti clamp.</summary>
+    /// <summary>Samples at normalized (u,v). mirror=true reflects the edges (no seams), otherwise clamps.</summary>
     public void Sample(float u, float v, bool mirror, Span<float> o)
     {
         if (mirror) { u = Mirror(u); v = Mirror(v); }
@@ -45,7 +45,7 @@ internal sealed class Field
         }
     }
 
-    /// <summary>Immagine di riserva: arcobaleno diagonale, usata se lo sfondo non e' leggibile.</summary>
+    /// <summary>Fallback image: diagonal rainbow, used when the wallpaper cannot be read.</summary>
     public static Field Rainbow(int w = 64, int h = 36)
     {
         var f = new Field(w, h, 3);

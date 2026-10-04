@@ -3,7 +3,7 @@ using Microsoft.Win32.SafeHandles;
 
 namespace LegionChromaFlow;
 
-/// <summary>Accesso HID minimale (SetupAPI + hid.dll), senza librerie esterne.</summary>
+/// <summary>Minimal HID access (SetupAPI + hid.dll), no external libraries.</summary>
 internal sealed class HidDevice : IDisposable
 {
     public SafeFileHandle Handle { get; }
@@ -23,7 +23,7 @@ internal sealed class HidDevice : IDisposable
 
     public bool GetFeature(byte[] buffer) => HidD_GetFeature(Handle, buffer, (uint)buffer.Length);
 
-    /// <summary>Elenca i dispositivi HID del produttore indicato con la lunghezza di feature report richiesta.</summary>
+    /// <summary>Enumerates the HID devices of the given vendor with the requested feature report length.</summary>
     public static List<HidDevice> Enumerate(ushort vendorId, int featureLength)
     {
         var result = new List<HidDevice>();
@@ -49,7 +49,7 @@ internal sealed class HidDevice : IDisposable
                 string? path = null;
                 try
                 {
-                    Marshal.WriteInt32(buf, IntPtr.Size == 8 ? 8 : 6); // cbSize di SP_DEVICE_INTERFACE_DETAIL_DATA_W
+                    Marshal.WriteInt32(buf, IntPtr.Size == 8 ? 8 : 6); // cbSize of SP_DEVICE_INTERFACE_DETAIL_DATA_W
                     if (SetupDiGetDeviceInterfaceDetailW(info, ref data, buf, required, out _, IntPtr.Zero))
                         path = Marshal.PtrToStringUni(buf + 4);
                 }

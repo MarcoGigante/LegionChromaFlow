@@ -1,5 +1,5 @@
 @echo off
-rem Avvia l'effetto con la finestra visibile (Ctrl+C per fermare)
+rem Starts the effect in a visible console window (Ctrl+C to stop)
 cd /d "%~dp0"
 dotnet bin\LegionChromaFlow.dll run
 echo.

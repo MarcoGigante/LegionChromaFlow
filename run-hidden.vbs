@@ -1,4 +1,4 @@
-' Avvia pannello + effetto in background (icona nell'area di notifica). Per fermarlo: stop.bat o Esci dal menu dell'icona
+' Starts the panel + effect silently in the tray. To stop it: stop.bat, or Exit in the tray menu
 Set fso = CreateObject("Scripting.FileSystemObject")
 dir = fso.GetParentFolderName(WScript.ScriptFullName)
 Set sh = CreateObject("WScript.Shell")

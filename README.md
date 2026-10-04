@@ -14,7 +14,7 @@ Dynamic per-key RGB lighting with a Razer-Chroma-style control panel — no Leno
 
 [Features](#features) · [Quick start](#quick-start) · [Control panel](#control-panel) · [Wave styles](#wave-styles) · [Configuration](#configuration) · [Troubleshooting](#troubleshooting) · [How it works](#how-it-works)
 
-**English** · [Italiano](README.it.md)
+**English** · [Italiano](README.it.md) · [Español](README.es.md) · [Français](README.fr.md) · [Deutsch](README.de.md) · [Português](README.pt.md) · [简体中文](README.zh.md)
 
 <img src="docs/screenshot-live.png" alt="LegionChromaFlow control panel with live keyboard preview" width="860">
 
@@ -30,6 +30,7 @@ Dynamic per-key RGB lighting with a Razer-Chroma-style control panel — no Leno
 - ⚡ **Two wave styles** — a soft, glowing *Smooth* dissolve, or a crisp *Barrier*: a thin band of dark keys sweeps across and the new colors appear right behind it.
 - 🧈 **Buttery transitions** — a tunable “follow” time so the lights glide toward window colors instead of stepping.
 - 🎛️ **Razer-style control panel** — dark UI, live keyboard preview, tooltips on every option; changes apply instantly and are saved for you.
+- 🌍 **7 interface languages** — English, Italiano, Español, Français, Deutsch, Português and 简体中文, switchable live from the panel (auto-detected from your Windows display language by default).
 - 🔔 **System-tray app** — left-click to show/hide the panel, right-click for quick style switch, wave preview and *Exit*.
 - 🔌 **Zero dependencies** — talks to the keyboard through `hid.dll`, reads the wallpaper with GDI+, captures windows with GDI. Nothing to install except .NET.
 - 🔁 **Self-healing** — reconnects automatically after sleep/resume or when the keyboard re-enumerates.
@@ -86,6 +87,7 @@ Edit `config/config.json` (it is commented) or use the panel. The most useful ke
 
 | Key | Effect |
 |---|---|
+| `Language` | `"auto"` (Windows display language), `"en"`, `"it"`, `"es"`, `"fr"`, `"de"`, `"pt"` or `"zh"` |
 | `WaveStyle` | `"smooth"` or `"barrier"` |
 | `WindowInfluence` | `0` ignore the window · `0.28` subtle tint · `1` full takeover |
 | `WindowFollowSeconds` | How smoothly lights chase window colors. `0` instant (can look steppy) · `1.2` default · `3+` very smooth, slower to react |

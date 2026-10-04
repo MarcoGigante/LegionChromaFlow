@@ -1,5 +1,5 @@
 @echo off
-rem Prova rapida: tutti i tasti rosso, verde, blu (2,5 s ciascuno), poi ripristina
+rem Quick test: every key red, green, blue (2.5 s each), then restores the profile
 cd /d "%~dp0"
 dotnet bin\LegionChromaFlow.dll test
 echo.

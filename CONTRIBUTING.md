@@ -7,6 +7,7 @@ Thanks for your interest! Bug reports, hardware reports and pull requests are we
   (`dotnet bin\LegionChromaFlow.dll probe`) and say whether `test.bat` worked.
 * Keep pull requests small and focused. Explain *why* in the description.
 * Run `dotnet bin\LegionChromaFlow.dll selftest` before submitting; it must pass.
+* **Translations are welcome.** UI strings live in one table in `src/Loc.cs` (row order: en, it, es, fr, de, pt, zh). To add a language, add it to `L.Languages` and append a string to every row.
 * No new dependencies. The project intentionally has none.
 * All pull requests are reviewed by the maintainer before merging. Nothing is
   merged without review, and release binaries are only built by the maintainer's

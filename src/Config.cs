@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace LegionChromaFlow;
 
-/// <summary>Cartelle dell'applicazione (C:\LegionChromaFlow\...).</summary>
+/// <summary>Application folders (C:\LegionChromaFlow\...).</summary>
 internal sealed class AppPaths
 {
     public string Root { get; init; } = "";
@@ -25,67 +25,70 @@ internal sealed class AppPaths
     }
 }
 
-/// <summary>Impostazioni modificabili in config\config.json.</summary>
+/// <summary>Settings editable in config\config.json.</summary>
 internal sealed class Config
 {
-    /// <summary>Fotogrammi al secondo inviati alla tastiera (10-40).</summary>
+    /// <summary>Frames per second sent to the keyboard (5-40).</summary>
     public int Fps { get; set; } = 20;
 
-    /// <summary>Luminosita' globale (0.1 - 1.0).</summary>
+    /// <summary>Global brightness (0.1 - 1.0).</summary>
     public double Brightness { get; set; } = 1.0;
 
-    /// <summary>Saturazione dei colori (1.0 = originale).</summary>
+    /// <summary>Color saturation (1.0 = original).</summary>
     public double Saturation { get; set; } = 1.25;
 
-    /// <summary>Gamma: valori piu' alti = colori piu' profondi e meno slavati sui LED.</summary>
+    /// <summary>Gamma: higher values = deeper, less washed-out colors on the LEDs.</summary>
     public double Gamma { get; set; } = 1.4;
 
-    /// <summary>Quanto la finestra attiva puo' influenzare i colori (0 = mai, 0.3 = lieve, 1 = totale).</summary>
+    /// <summary>How much the active window can influence the colors (0 = never, 0.3 = subtle, 1 = total).</summary>
     public double WindowInfluence { get; set; } = 0.28;
 
-    /// <summary>Durata in secondi dell'onda che parte dal centro quando cambi finestra.</summary>
+    /// <summary>Duration in seconds of the wave that starts from the center when you switch window.</summary>
     public double WaveSeconds { get; set; } = 1.8;
 
-    /// <summary>Larghezza del fronte d'onda (0.1 - 1.0, in frazione della tastiera).</summary>
+    /// <summary>Width of the wave front (0.1 - 1.0, as a fraction of the keyboard).</summary>
     public double WaveBand { get; set; } = 0.35;
 
-    /// <summary>Quanto si illumina il fronte d'onda mentre si propaga (0 = per niente).</summary>
+    /// <summary>How much the wave front lights up while it travels (0 = not at all).</summary>
     public double WaveGlow { get; set; } = 0.15;
 
-    /// <summary>Stile dell'onda: "smooth" (dissolvenza morbida con bagliore) oppure "barrier" (fronte netto con una barriera di tasti spenti).</summary>
+    /// <summary>Interface language: "auto" (Windows display language), "en", "it", "es", "fr", "de", "pt" or "zh".</summary>
+    public string Language { get; set; } = "auto";
+
+    /// <summary>Wave style: "smooth" (soft dissolve with glow) or "barrier" (crisp front with a band of switched-off keys).</summary>
     public string WaveStyle { get; set; } = "smooth";
 
-    /// <summary>Spessore della barriera di tasti spenti nello stile "barrier" (0.05 - 0.6, in frazione della tastiera).</summary>
+    /// <summary>Thickness of the band of switched-off keys in the "barrier" style (0.05 - 0.6, as a fraction of the keyboard).</summary>
     public double BarrierWidth { get; set; } = 0.14;
 
-    /// <summary>Secondi con cui i colori della finestra vengono "inseguiti" (0 = subito, piu' alto = piu' fluido ma con ritardo).</summary>
+    /// <summary>Seconds over which the window colors are "chased" (0 = instantly, higher = smoother but delayed).</summary>
     public double WindowFollowSeconds { get; set; } = 1.2;
 
-    /// <summary>Velocita' con cui il motivo dello sfondo scorre sulla tastiera (1 = default, 0 = fermo).</summary>
+    /// <summary>Speed at which the wallpaper pattern drifts across the keyboard (1 = default, 0 = still).</summary>
     public double DriftSpeed { get; set; } = 1.0;
 
-    /// <summary>Intensita' dello sfarfallio casuale tra tasto e tasto (0 = nessuno).</summary>
+    /// <summary>Intensity of the random shimmer from key to key (0 = none).</summary>
     public double Shimmer { get; set; } = 0.10;
 
-    /// <summary>Ogni quanti secondi (media) compare un'onda casuale di luce (0 = mai).</summary>
+    /// <summary>Average seconds between random ripples of light (0 = never).</summary>
     public double RandomRippleEverySeconds { get; set; } = 8;
 
-    /// <summary>Soglia di "colore": sotto questa croma i pixel della finestra vengono ignorati (grigi, bianchi, neri).</summary>
+    /// <summary>"Color" threshold: window pixels below this chroma are ignored (grays, whites, blacks).</summary>
     public double ChromaThreshold { get; set; } = 0.14;
 
-    /// <summary>Soglia di luminosita': sotto questo valore i pixel della finestra (sfondo nero) vengono ignorati.</summary>
+    /// <summary>Brightness threshold: window pixels below this value (black backgrounds) are ignored.</summary>
     public double ValueThreshold { get; set; } = 0.12;
 
-    /// <summary>Ogni quanti millisecondi viene letta la finestra attiva.</summary>
+    /// <summary>Milliseconds between reads of the active window.</summary>
     public int WindowSampleMs { get; set; } = 250;
 
-    /// <summary>Ogni quanti secondi si controlla se lo sfondo del desktop e' cambiato.</summary>
+    /// <summary>Seconds between checks for a changed desktop wallpaper.</summary>
     public int WallpaperRecheckSeconds { get; set; } = 10;
 
-    /// <summary>Percorso di un'immagine da usare al posto dello sfondo del desktop (vuoto = usa lo sfondo di Windows).</summary>
+    /// <summary>Path of an image to use instead of the desktop wallpaper (empty = use the Windows wallpaper).</summary>
     public string WallpaperOverride { get; set; } = "";
 
-    /// <summary>Profilo Spectrum da usare (0 = quello attualmente attivo sulla tastiera).</summary>
+    /// <summary>Spectrum profile to use (0 = the one currently active on the keyboard).</summary>
     public int Profile { get; set; } = 0;
 
     private static readonly JsonSerializerOptions JsonOpts = new()
@@ -109,11 +112,11 @@ internal sealed class Config
 
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             File.WriteAllText(path, JsonSerializer.Serialize(new Config(), JsonOpts));
-            Log.Info($"Creato file di configurazione: {path}");
+            Log.Info($"Created configuration file: {path}");
         }
         catch (Exception ex)
         {
-            Log.Warn($"Configurazione non leggibile, uso i valori predefiniti: {ex.Message}");
+            Log.Warn($"Configuration not readable, using defaults: {ex.Message}");
         }
 
         var def = new Config();
@@ -121,7 +124,7 @@ internal sealed class Config
         return def;
     }
 
-    /// <summary>Aggiorna alcune voci direttamente nel file, conservando i commenti.</summary>
+    /// <summary>Updates some entries directly in the file, preserving the comments.</summary>
     public static void SaveValues(string path, IReadOnlyDictionary<string, string> values)
     {
         try
@@ -135,7 +138,7 @@ internal sealed class Config
             }
             File.WriteAllText(path, text);
         }
-        catch (Exception ex) { Log.Warn($"Salvataggio configurazione fallito: {ex.Message}"); }
+        catch (Exception ex) { Log.Warn($"Saving the configuration failed: {ex.Message}"); }
     }
 
     public void Clamp()
@@ -148,6 +151,7 @@ internal sealed class Config
         WaveSeconds = Math.Clamp(WaveSeconds, 0.3, 10.0);
         WaveBand = Math.Clamp(WaveBand, 0.1, 1.0);
         WaveGlow = Math.Clamp(WaveGlow, 0.0, 1.0);
+        Language = (Language ?? "auto").Trim().ToLowerInvariant();
         WindowFollowSeconds = Math.Clamp(WindowFollowSeconds, 0.0, 10.0);
         WaveStyle = string.Equals(WaveStyle?.Trim(), "barrier", StringComparison.OrdinalIgnoreCase) ? "barrier" : "smooth";
         BarrierWidth = Math.Clamp(BarrierWidth, 0.05, 0.6);

@@ -14,13 +14,13 @@ internal static class Theme
     public static readonly Color Line = Color.FromArgb(44, 44, 50);
     public static readonly Color Text = Color.FromArgb(236, 236, 240);
     public static readonly Color Dim = Color.FromArgb(150, 150, 160);
-    public static readonly Color Accent = Color.FromArgb(68, 214, 44);   // verde "Razer"
+    public static readonly Color Accent = Color.FromArgb(68, 214, 44);   // "Razer" green
     public static readonly Color Cyan = Color.FromArgb(0, 200, 255);
     public static readonly Color Magenta = Color.FromArgb(255, 60, 200);
 
     public static Font Font(float size, FontStyle style = FontStyle.Regular) => new("Segoe UI", size, style, GraphicsUnit.Point);
 
-    /// <summary>Fattore di scala del monitor (1.0 = 96 dpi).</summary>
+    /// <summary>Monitor scale factor (1.0 = 96 dpi).</summary>
     public static float K(Control c) => Math.Max(1f, c.DeviceDpi / 96f);
 
     public static GraphicsPath Round(RectangleF r, float rad)
@@ -48,7 +48,7 @@ internal sealed class DbFlow : FlowLayoutPanel
     public DbFlow() { DoubleBuffered = true; BackColor = Theme.Bg; Margin = Padding.Empty; }
 }
 
-/// <summary>Icona tonda "i": passando sopra con il mouse compare la spiegazione.</summary>
+/// <summary>Round "i" icon: hovering it shows the explanation.</summary>
 internal sealed class InfoIcon : Control
 {
     private bool _hot;
@@ -85,17 +85,28 @@ internal sealed class InfoIcon : Control
     }
 }
 
-/// <summary>Una voce di impostazione su una "scheda": titolo, icona info, descrizione breve, valore e cursore.</summary>
+/// <summary>A setting on a "card": title, info icon, short description, value and slider.</summary>
 internal sealed class OptionRow : Control
 {
     private readonly Font _cap = Theme.Font(10.5f, FontStyle.Bold);
     private readonly Font _val = Theme.Font(10.5f, FontStyle.Bold);
     private readonly Font _sub = Theme.Font(9f);
     private readonly InfoIcon _info = new();
+    private readonly ToolTip _tip;
+    private readonly string _key;
     private bool _drag;
 
-    public string Caption { get; }
-    public string Sub { get; }
+    public string Caption => L.T($"o.{_key}.c");
+    public string Help => L.T($"o.{_key}.h");
+    public string Sub
+    {
+        get
+        {
+            var help = Help;
+            var cut = help.IndexOfAny(new[] { '.', '\n', '。' });
+            return cut > 0 ? help[..cut].Trim() : help;
+        }
+    }
     public string Note { get; private set; } = "";
     public double Min { get; }
     public double Max { get; }
@@ -104,22 +115,33 @@ internal sealed class OptionRow : Control
     public bool Applies { get; private set; } = true;
     public event Action<double>? Changed;
 
-    public OptionRow(string caption, string help, double min, double max, double value, Func<double, string> fmt, ToolTip tip)
+    public OptionRow(string key, double min, double max, double value, Func<double, string> fmt, ToolTip tip)
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-        Caption = caption; Min = min; Max = max; Value = Math.Clamp(value, min, max); Fmt = fmt;
-        var cut = help.IndexOfAny(new[] { '.', '\n' });
-        Sub = cut > 0 ? help[..cut].Trim() : help;
+        _key = key; _tip = tip; Min = min; Max = max; Value = Math.Clamp(value, min, max); Fmt = fmt;
         BackColor = Theme.Bg;
         Height = 86;
         Controls.Add(_info);
-        tip.SetToolTip(_info, help);
+        Relang();
+    }
+
+    /// <summary>Re-applies texts after a language change.</summary>
+    public void Relang()
+    {
+        _tip.SetToolTip(_info, Help);
+        if (IsHandleCreated) PlaceInfo();
+        Invalidate();
     }
 
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
         Height = (int)(86 * Theme.K(this));
+        PlaceInfo();
+    }
+
+    private void PlaceInfo()
+    {
         var k = Theme.K(this);
         _info.Left = (int)(18 * k) + TextRenderer.MeasureText(Caption, _cap, new Size(int.MaxValue, 0), TextFormatFlags.NoPadding).Width + (int)(8 * k);
         _info.Top = (int)(9 * k);
@@ -204,7 +226,7 @@ internal sealed class OptionRow : Control
     }
 }
 
-/// <summary>Scheda di scelta dello stile con una mini anteprima.</summary>
+/// <summary>Wave style card with a mini preview.</summary>
 internal sealed class StyleCard : Control
 {
     private readonly Font _t = Theme.Font(13f, FontStyle.Bold);
@@ -212,13 +234,13 @@ internal sealed class StyleCard : Control
     private bool _hot;
     public string Kind { get; }
     public string Title { get; }
-    public string Sub { get; }
+    public string Sub => L.T($"card.{Kind}.sub");
     public bool Selected { get; set; }
 
-    public StyleCard(string kind, string title, string sub)
+    public StyleCard(string kind, string title)
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-        Kind = kind; Title = title; Sub = sub;
+        Kind = kind; Title = title;
         Cursor = Cursors.Hand; BackColor = Theme.Bg;
     }
 
@@ -242,7 +264,7 @@ internal sealed class StyleCard : Control
         TextRenderer.DrawText(g, Title, _t, new Point(pad, (int)(12 * k)), Selected ? Theme.Accent : Theme.Text, TextFormatFlags.NoPadding);
         TextRenderer.DrawText(g, Sub, _s, new Rectangle(pad, (int)(40 * k), Width - 2 * pad, (int)(22 * k)), Theme.Dim, TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
 
-        // mini anteprima: 18 tasti
+        // mini preview: 18 keys
         const int n = 18;
         var area = Width - 2f * pad;
         var kw = area / n;
@@ -266,7 +288,7 @@ internal sealed class StyleCard : Control
         => Color.FromArgb((int)(a.R + (b.R - a.R) * t), (int)(a.G + (b.G - a.G) * t), (int)(a.B + (b.B - a.B) * t));
 }
 
-/// <summary>Anteprima dal vivo dei colori che stanno andando sulla tastiera.</summary>
+/// <summary>Live preview of the colors currently going to the keyboard.</summary>
 internal sealed class KeyPreview : Control
 {
     private readonly byte[] _buf = new byte[512 * 3];
@@ -294,13 +316,13 @@ internal sealed class KeyPreview : Control
         var n = Live.Snapshot(out var xs, out var ys, _buf);
         if (n == 0)
         {
-            TextRenderer.DrawText(g, Live.Status, _f, ClientRectangle, Theme.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+            TextRenderer.DrawText(g, Live.StatusText, _f, ClientRectangle, Theme.Dim, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
             return;
         }
 
         var pad = 16f * k;
         var w = Width - pad * 2; var h = Height - pad * 2;
-        // 20 colonne x 7 righe: i tasti restano quadrati
+        // 20 columns x 7 rows: keys stay square
         var kw = Math.Min(w / 21f, h / 7.6f);
         var gw = kw * 20.4f; var gh = kw * 7.0f;
         var ox = (Width - gw) / 2f; var oy = (Height - gh) / 2f;
@@ -317,19 +339,21 @@ internal sealed class KeyPreview : Control
     }
 }
 
-/// <summary>Voce della barra laterale (macro area).</summary>
+/// <summary>Sidebar entry (macro area).</summary>
 internal sealed class NavButton : Control
 {
     private readonly Font _f = Theme.Font(10.5f, FontStyle.Bold);
     private readonly Font _s = Theme.Font(8.5f);
     private bool _hot;
     public bool Selected { get; set; }
-    public string Sub { get; }
+    public string PageId { get; }
+    private string Title => L.T($"p.{PageId}.t");
+    private string Sub => L.T($"p.{PageId}.s");
 
-    public NavButton(string text, string sub)
+    public NavButton(string id)
     {
         SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-        Text = text; Sub = sub; Cursor = Cursors.Hand; BackColor = Theme.Side;
+        PageId = id; Cursor = Cursors.Hand; BackColor = Theme.Side;
         Height = 50;
     }
 
@@ -347,8 +371,45 @@ internal sealed class NavButton : Control
             using var b = new SolidBrush(Theme.Accent);
             g.FillRectangle(b, 0, 0, (int)(4 * k), Height);
         }
-        TextRenderer.DrawText(g, Text, _f, new Point((int)(22 * k), (int)(7 * k)), Selected ? Theme.Accent : Theme.Text, TextFormatFlags.NoPadding);
+        TextRenderer.DrawText(g, Title, _f, new Point((int)(22 * k), (int)(7 * k)), Selected ? Theme.Accent : Theme.Text, TextFormatFlags.NoPadding);
         TextRenderer.DrawText(g, Sub, _s, new Point((int)(22 * k), (int)(28 * k)), Theme.Dim, TextFormatFlags.NoPadding);
+    }
+}
+
+/// <summary>Language button in the top bar.</summary>
+internal sealed class LangButton : Control
+{
+    private readonly Font _f = Theme.Font(9.5f, FontStyle.Bold);
+    private bool _hot;
+
+    public LangButton()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+        Cursor = Cursors.Hand; BackColor = Theme.Bg;
+    }
+
+    public string Label => "◉  " + L.Languages.First(l => l.Code == L.Current).Native + "  ▾";
+
+    public Size Measure() => TextRenderer.MeasureText(Label, _f, new Size(int.MaxValue, 0), TextFormatFlags.NoPadding)
+        + new Size((int)(24 * Theme.K(this)), (int)(14 * Theme.K(this)));
+
+    protected override void OnMouseEnter(EventArgs e) { _hot = true; Invalidate(); base.OnMouseEnter(e); }
+    protected override void OnMouseLeave(EventArgs e) { _hot = false; Invalidate(); base.OnMouseLeave(e); }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        Theme.Smooth(g);
+        g.Clear(Theme.Bg);
+        var k = Theme.K(this);
+        var r = new RectangleF(1, 1, Width - 3, Height - 3);
+        using (var path = Theme.Round(r, 8 * k))
+        {
+            using var b = new SolidBrush(_hot ? Theme.PanelHot : Theme.Panel); g.FillPath(b, path);
+            using var pen = new Pen(_hot ? Theme.Accent : Theme.Line); g.DrawPath(pen, path);
+        }
+        TextRenderer.DrawText(g, Label, _f, new Rectangle(0, 0, Width, Height), Theme.Text,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
     }
 }
 
@@ -357,19 +418,10 @@ internal sealed class MainForm : Form
     [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hwnd, int cmd);
     [DllImport("dwmapi.dll")] private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
 
-    private sealed record Opt(string Page, string Key, string Caption, double Min, double Max, Func<Config, double> Get, Action<Config, double> Set,
-        Func<double, string> Fmt, string Help, string AppliesTo = "");
+    private sealed record Opt(string Page, string Key, double Min, double Max, Func<Config, double> Get, Action<Config, double> Set,
+        Func<double, string> Fmt, string AppliesTo = "");
 
-    private sealed record PageInfo(string Id, string Title, string Sub, string Heading, string Lead);
-
-    private static readonly PageInfo[] PageDefs =
-    {
-        new("live", "Luci", "Anteprima e stile", "Luci dal vivo", "Quello che vedi qui e' quello che sta andando sulla tastiera. Scegli lo stile dell'onda."),
-        new("wave", "Onda", "Cambio finestra", "Onda al cambio finestra", "Come si propaga l'effetto dal centro della tastiera quando cambi finestra."),
-        new("window", "Finestra", "Colori e fluidita'", "Colori della finestra attiva", "Quanto e come i colori della finestra aperta influenzano la tastiera."),
-        new("look", "Aspetto", "Resa dei colori", "Aspetto delle luci", "Luminosita', intensita' e profondita' dei colori sui LED."),
-        new("desk", "Desktop", "Movimento e velocita'", "Movimento dello sfondo", "Come scorre lo sfondo del desktop sulla tastiera e quanto e' fluido l'invio."),
-    };
+    private static readonly string[] PageIds = { "live", "wave", "window", "look", "desk" };
 
     private readonly Config _cfg;
     private readonly AppPaths _paths;
@@ -380,56 +432,44 @@ internal sealed class MainForm : Form
     private readonly Dictionary<string, string> _pending = new();
     private readonly List<(Opt opt, OptionRow row)> _rows = new();
     private readonly List<StyleCard> _cards = new();
-    private readonly List<(PageInfo info, NavButton nav, Control page)> _pages = new();
+    private readonly List<(string id, NavButton nav, Control page)> _pages = new();
     private readonly List<(DbFlow flow, List<OptionRow> rows)> _flows = new();
-    private readonly ToolStripMenuItem _miSmooth = new(), _miBarrier = new(), _miAuto = new("Avvia con Windows");
+    private readonly List<Action> _relang = new();
+    private readonly ToolStripMenuItem _miOpen = new(), _miStyle = new(), _miSmooth = new(), _miBarrier = new(), _miWave = new(), _miExit = new(), _miAuto = new();
     private readonly Font _small = Theme.Font(9.5f);
     private KeyPreview? _big, _mini;
     private Label _status = new();
     private Panel _dot = new();
+    private LangButton _langBtn = new();
     private bool _hideFirst;
     private bool _exiting;
     private bool _balloonShown;
 
     private static string F(double v) => v.ToString("0.####", CultureInfo.InvariantCulture);
 
-    private IEnumerable<Opt> Options() => new[]
+    private static IEnumerable<Opt> Options() => new[]
     {
-        new Opt("wave", "WaveSeconds", "Durata dell'onda", 0.5, 6, c => c.WaveSeconds, (c, v) => c.WaveSeconds = v,
-            v => $"{v:0.0} s", "Quanti secondi impiega l'onda a viaggiare dal centro ai bordi della tastiera quando cambi finestra.\n\nBasso = scatto rapido e vivace.\nAlto = onda lenta e scenografica."),
-        new Opt("wave", "BarrierWidth", "Spessore della barriera", 0.05, 0.5, c => c.BarrierWidth, (c, v) => c.BarrierWidth = v,
-            v => $"{v * 100:0}%", "Larghezza della fascia di tasti spenti che precede i nuovi colori, in percentuale della tastiera.\n\nBasso = linea sottile e netta.\nAlto = larga fascia scura.\n\nVale solo per lo stile Barrier.", "barrier"),
-        new Opt("wave", "WaveBand", "Morbidezza del fronte", 0.1, 1, c => c.WaveBand, (c, v) => c.WaveBand = v,
-            v => $"{v * 100:0}%", "Quanto e' sfumato il passaggio tra vecchi e nuovi colori.\n\nBasso = passaggio netto.\nAlto = dissolvenza molto morbida.\n\nVale solo per lo stile Smooth.", "smooth"),
-        new Opt("wave", "WaveGlow", "Bagliore del fronte", 0, 1, c => c.WaveGlow, (c, v) => c.WaveGlow = v,
-            v => $"{v * 100:0}%", "Quanto si illumina di bianco il fronte dell'onda mentre avanza. 0 = nessun bagliore.\n\nVale solo per lo stile Smooth.", "smooth"),
+        new Opt("wave", "WaveSeconds", 0.5, 6, c => c.WaveSeconds, (c, v) => c.WaveSeconds = v, v => $"{v:0.0} s"),
+        new Opt("wave", "BarrierWidth", 0.05, 0.5, c => c.BarrierWidth, (c, v) => c.BarrierWidth = v, v => $"{v * 100:0}%", "barrier"),
+        new Opt("wave", "WaveBand", 0.1, 1, c => c.WaveBand, (c, v) => c.WaveBand = v, v => $"{v * 100:0}%", "smooth"),
+        new Opt("wave", "WaveGlow", 0, 1, c => c.WaveGlow, (c, v) => c.WaveGlow = v, v => $"{v * 100:0}%", "smooth"),
 
-        new Opt("window", "WindowInfluence", "Influenza della finestra", 0, 1, c => c.WindowInfluence, (c, v) => c.WindowInfluence = v,
-            v => $"{v * 100:0}%", "Quanto i colori della finestra attiva coprono quelli del desktop, finche' la finestra resta aperta.\n\n0% = li ignora sempre.\n30% = leggera tinta.\n100% = la tastiera prende i colori della finestra."),
-        new Opt("window", "WindowFollowSeconds", "Fluidita' dei colori", 0, 6, c => c.WindowFollowSeconds, (c, v) => c.WindowFollowSeconds = v,
-            v => v < 0.05 ? "immediato" : $"{v:0.0} s", "Quanto dolcemente le luci inseguono i colori della finestra quando il suo contenuto cambia (scorrimento, video, pagine).\n\n0 = reagisce subito ma puo' risultare a scatti.\nAlto = transizioni molto fluide, con un po' di ritardo nel cambio colore."),
-        new Opt("window", "ChromaThreshold", "Soglia colore", 0, 0.6, c => c.ChromaThreshold, (c, v) => c.ChromaThreshold = v,
-            v => $"{v:0.00}", "Sotto questa vivacita' i pixel della finestra sono considerati senza colore (grigi, bianchi) e ignorati.\n\nAlzala per ignorare anche i colori pastello."),
-        new Opt("window", "ValueThreshold", "Soglia luminosita'", 0, 0.5, c => c.ValueThreshold, (c, v) => c.ValueThreshold = v,
-            v => $"{v:0.00}", "Sotto questa luminosita' i pixel della finestra (nero, sfondi scuri) sono ignorati.\n\nSe la finestra e' nera, la tastiera resta sui colori del desktop."),
-        new Opt("window", "WindowSampleMs", "Frequenza di lettura", 50, 2000, c => c.WindowSampleMs, (c, v) => c.WindowSampleMs = (int)v,
-            v => $"{v:0} ms", "Ogni quanti millisecondi viene letta la finestra attiva.\n\nBasso = reagisce prima ma usa piu' CPU.\nAlto = piu' leggero."),
+        new Opt("window", "WindowInfluence", 0, 1, c => c.WindowInfluence, (c, v) => c.WindowInfluence = v, v => $"{v * 100:0}%"),
+        new Opt("window", "WindowFollowSeconds", 0, 6, c => c.WindowFollowSeconds, (c, v) => c.WindowFollowSeconds = v,
+            v => v < 0.05 ? L.T("f.instant") : $"{v:0.0} s"),
+        new Opt("window", "ChromaThreshold", 0, 0.6, c => c.ChromaThreshold, (c, v) => c.ChromaThreshold = v, v => $"{v:0.00}"),
+        new Opt("window", "ValueThreshold", 0, 0.5, c => c.ValueThreshold, (c, v) => c.ValueThreshold = v, v => $"{v:0.00}"),
+        new Opt("window", "WindowSampleMs", 50, 2000, c => c.WindowSampleMs, (c, v) => c.WindowSampleMs = (int)v, v => $"{v:0} ms"),
 
-        new Opt("look", "Brightness", "Luminosita'", 0.1, 1, c => c.Brightness, (c, v) => c.Brightness = v,
-            v => $"{v * 100:0}%", "Luminosita' generale di tutti i tasti."),
-        new Opt("look", "Saturation", "Saturazione", 0, 2.5, c => c.Saturation, (c, v) => c.Saturation = v,
-            v => $"{v:0.00}", "Intensita' dei colori.\n\n0 = bianco e nero.\n1 = colori originali.\nPiu' di 1 = colori piu' accesi."),
-        new Opt("look", "Gamma", "Profondita' (gamma)", 0.6, 3, c => c.Gamma, (c, v) => c.Gamma = v,
-            v => $"{v:0.0}", "Alto = colori piu' profondi e meno slavati sui LED, ma piu' scuri.\nBasso = colori piu' chiari e pastello."),
+        new Opt("look", "Brightness", 0.1, 1, c => c.Brightness, (c, v) => c.Brightness = v, v => $"{v * 100:0}%"),
+        new Opt("look", "Saturation", 0, 2.5, c => c.Saturation, (c, v) => c.Saturation = v, v => $"{v:0.00}"),
+        new Opt("look", "Gamma", 0.6, 3, c => c.Gamma, (c, v) => c.Gamma = v, v => $"{v:0.0}"),
 
-        new Opt("desk", "DriftSpeed", "Velocita' dello sfondo", 0, 4, c => c.DriftSpeed, (c, v) => c.DriftSpeed = v,
-            v => v < 0.05 ? "fermo" : $"{v:0.0}x", "Quanto velocemente l'immagine del desktop scorre e ondeggia sui tasti.\n\n0 = ferma.\n1 = lenta (predefinito).\n4 = veloce."),
-        new Opt("desk", "Shimmer", "Sfarfallio tra tasti", 0, 0.6, c => c.Shimmer, (c, v) => c.Shimmer = v,
-            v => $"{v * 100:0}%", "Piccole variazioni casuali di luminosita' da un tasto all'altro, per un aspetto piu' vivo."),
-        new Opt("desk", "RandomRippleEverySeconds", "Onde casuali di luce", 0, 60, c => c.RandomRippleEverySeconds, (c, v) => c.RandomRippleEverySeconds = v,
-            v => v < 1 ? "mai" : $"ogni {v:0} s", "Ogni quanti secondi (in media) compare una piccola onda di luce casuale.\n\n0 = mai."),
-        new Opt("desk", "Fps", "Fotogrammi al secondo", 5, 40, c => c.Fps, (c, v) => c.Fps = (int)v,
-            v => $"{v:0} fps", "Quante volte al secondo vengono inviati i colori alla tastiera.\n\nAlto = movimento piu' fluido.\nBasso = meno carico, ma a scatti."),
+        new Opt("desk", "DriftSpeed", 0, 4, c => c.DriftSpeed, (c, v) => c.DriftSpeed = v, v => v < 0.05 ? L.T("f.still") : $"{v:0.0}x"),
+        new Opt("desk", "Shimmer", 0, 0.6, c => c.Shimmer, (c, v) => c.Shimmer = v, v => $"{v * 100:0}%"),
+        new Opt("desk", "RandomRippleEverySeconds", 0, 60, c => c.RandomRippleEverySeconds, (c, v) => c.RandomRippleEverySeconds = v,
+            v => v < 1 ? L.T("f.never") : L.T("f.every", v.ToString("0"))),
+        new Opt("desk", "Fps", 5, 40, c => c.Fps, (c, v) => c.Fps = (int)v, v => $"{v:0} fps"),
     };
 
     public MainForm(Config cfg, AppPaths paths, bool startHidden)
@@ -468,7 +508,7 @@ internal sealed class MainForm : Form
                 Theme.Text, TextFormatFlags.WordBreak);
         };
 
-        // Ordine di inserimento: il riempimento per primo, poi i bordi.
+        // Insertion order: the fill control first, then the edges.
         var content = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg, Padding = new Padding(28, 22, 28, 18) };
         var side = BuildSidebar();
         var top = BuildTopBar();
@@ -484,30 +524,35 @@ internal sealed class MainForm : Form
         ClientSize = new Size(1180, 760);
         MinimumSize = new Size((int)(860 * DeviceDpi / 96f), (int)(640 * DeviceDpi / 96f));
 
+        L.Changed += () => { if (IsHandleCreated) BeginInvoke(new Action(ApplyLanguage)); };
+        ApplyLanguage();
+
         _saveTimer.Tick += (_, _) => { _saveTimer.Stop(); Flush(); };
         _uiTimer.Tick += (_, _) =>
         {
             if (!Visible) return;
             _big?.Invalidate(); _mini?.Invalidate();
-            _status.Text = Live.Status;
-            var ok = Live.Status.StartsWith("Effetto") || Live.Status.StartsWith("Tastiera collegata");
-            var c = ok ? Theme.Accent : Theme.Magenta;
+            if (_status.Text != Live.StatusText) _status.Text = Live.StatusText;
+            var c = Live.StatusOk ? Theme.Accent : Theme.Magenta;
             if (_dot.BackColor != c) _dot.BackColor = c;
         };
         _uiTimer.Start();
         Resize += (_, _) => FitRows();
-        _ = Handle; // serve per poter usare BeginInvoke anche se parte nascosto
+        _ = Handle; // needed to use BeginInvoke even when starting hidden
     }
 
-    // ------------------------------------------------------------ costruzione interfaccia
+    // ------------------------------------------------------------ UI construction
 
     private Control BuildTopBar()
     {
         var bar = new Panel { Dock = DockStyle.Top, Height = 64, BackColor = Theme.Bg };
         var title = new Label { Text = "LEGION CHROMAFLOW", Font = Theme.Font(17f, FontStyle.Bold), ForeColor = Theme.Accent, AutoSize = true, Location = new Point(24, 12), BackColor = Theme.Bg };
         _dot = new Panel { Size = new Size(10, 10), BackColor = Theme.Magenta };
-        _status = new Label { Font = _small, ForeColor = Theme.Dim, AutoSize = true, BackColor = Theme.Bg, Text = Live.Status };
-        bar.Controls.AddRange(new Control[] { title, _dot, _status });
+        _status = new Label { Font = _small, ForeColor = Theme.Dim, AutoSize = true, BackColor = Theme.Bg, Text = Live.StatusText };
+        _langBtn = new LangButton();
+        _tip.SetToolTip(_langBtn, L.T("lang.tip"));
+        _langBtn.Click += (_, _) => ShowLanguageMenu();
+        bar.Controls.AddRange(new Control[] { title, _langBtn, _dot, _status });
         void Place()
         {
             var k = Theme.K(bar);
@@ -520,10 +565,14 @@ internal sealed class MainForm : Form
             _status.Location = new Point(bar.Width - tw - (int)(28 * k), (int)(20 * k));
             _dot.Size = new Size((int)(10 * k), (int)(10 * k));
             _dot.Location = new Point(_status.Left - _dot.Width - (int)(8 * k), (int)(28 * k));
+            var ls = _langBtn.Measure();
+            _langBtn.Size = ls;
+            _langBtn.Location = new Point(_dot.Left - ls.Width - (int)(28 * k), (int)(32 * k - ls.Height / 2f + 4 * k));
         }
         bar.Resize += (_, _) => Place();
         bar.HandleCreated += (_, _) => Place();
         _status.TextChanged += (_, _) => Place();
+        _relang.Add(() => { _tip.SetToolTip(_langBtn, L.T("lang.tip")); _langBtn.Invalidate(); Place(); });
         bar.Paint += (_, e) =>
         {
             var k = Theme.K(bar);
@@ -534,26 +583,66 @@ internal sealed class MainForm : Form
         return bar;
     }
 
+    private void ShowLanguageMenu()
+    {
+        var menu = new ContextMenuStrip { Renderer = new ToolStripProfessionalRenderer(new DarkColors()), BackColor = Color.FromArgb(24, 24, 28), ForeColor = Theme.Text, ShowImageMargin = false, Font = Theme.Font(10f) };
+        var setting = _cfg.Language;
+        var auto = new ToolStripMenuItem(L.T("lang.auto")) { Checked = setting == "auto" };
+        auto.Click += (_, _) => ChangeLanguage("auto");
+        menu.Items.Add(auto);
+        menu.Items.Add(new ToolStripSeparator());
+        foreach (var (code, native) in L.Languages)
+        {
+            var item = new ToolStripMenuItem(native) { Checked = setting == code };
+            var c = code;
+            item.Click += (_, _) => ChangeLanguage(c);
+            menu.Items.Add(item);
+        }
+        menu.Show(_langBtn, new Point(0, _langBtn.Height));
+    }
+
+    private void ChangeLanguage(string setting)
+    {
+        _cfg.Language = setting;
+        Queue("Language", $"\"{setting}\"");
+        L.Set(setting);
+        ApplyLanguage();
+    }
+
+    private void ApplyLanguage()
+    {
+        foreach (var a in _relang) a();
+        foreach (var (_, row) in _rows) row.Relang();
+        foreach (var c in _cards) c.Invalidate();
+        foreach (var (_, nav, _) in _pages) nav.Invalidate();
+        RefreshApplies();
+        _miOpen.Text = L.T("tray.open");
+        _miStyle.Text = L.T("tray.style");
+        _miSmooth.Text = L.T("tray.smooth");
+        _miBarrier.Text = L.T("tray.barrier");
+        _miWave.Text = L.T("tray.wave");
+        _miExit.Text = L.T("tray.exit");
+        _miAuto.Text = L.T("autostart");
+        _status.Text = Live.StatusText;
+    }
+
     private Control BuildSidebar()
     {
         var side = new Panel { Dock = DockStyle.Left, Width = 230, BackColor = Theme.Side };
         side.HandleCreated += (_, _) => side.Width = (int)(230 * Theme.K(side));
 
-        // in basso: mini anteprima + impostazioni generali
-        var bottom = new Panel { Dock = DockStyle.Bottom, BackColor = Theme.Side, Height = 250 };
+        // bottom: mini preview + general settings
+        var bottom = new Panel { Dock = DockStyle.Bottom, BackColor = Theme.Side, Height = 232 };
         bottom.HandleCreated += (_, _) => bottom.Height = (int)(232 * Theme.K(bottom));
         _mini = new KeyPreview();
 
-        var auto = new CheckBox { Text = "Avvia con Windows", ForeColor = Theme.Text, BackColor = Theme.Side, AutoSize = true, Cursor = Cursors.Hand, Checked = AutostartEnabled(), Font = Theme.Font(9.5f) };
+        var auto = new CheckBox { Text = L.T("autostart"), ForeColor = Theme.Text, BackColor = Theme.Side, AutoSize = true, Cursor = Cursors.Hand, Checked = AutostartEnabled(), Font = Theme.Font(9.5f) };
         auto.CheckedChanged += (_, _) => { SetAutostart(auto.Checked); _miAuto.Checked = auto.Checked; };
         _miAuto.CheckOnClick = true; _miAuto.Checked = auto.Checked;
         _miAuto.CheckedChanged += (_, _) => auto.Checked = _miAuto.Checked;
 
-        var hint = new Label
-        {
-            Text = "Trascina l'icona dall'area ^ vicino all'orologio sulla barra per averla sempre visibile.",
-            Font = Theme.Font(8.5f), ForeColor = Theme.Dim, BackColor = Theme.Side, AutoSize = false
-        };
+        var hint = new Label { Text = L.T("hint"), Font = Theme.Font(8.5f), ForeColor = Theme.Dim, BackColor = Theme.Side, AutoSize = false };
+        _relang.Add(() => { auto.Text = L.T("autostart"); hint.Text = L.T("hint"); });
 
         bottom.Controls.AddRange(new Control[] { _mini, auto, hint });
         void PlaceBottom()
@@ -569,13 +658,13 @@ internal sealed class MainForm : Form
 
         var nav = new DbFlow { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, BackColor = Theme.Side };
         nav.Padding = new Padding(0, 10, 0, 0);
-        foreach (var info in PageDefs)
+        foreach (var id in PageIds)
         {
-            var b = new NavButton(info.Title, info.Sub) { Margin = Padding.Empty };
-            var id = info.Id;
-            b.Click += (_, _) => SelectPage(id);
+            var b = new NavButton(id) { Margin = Padding.Empty };
+            var pid = id;
+            b.Click += (_, _) => SelectPage(pid);
             nav.Controls.Add(b);
-            _pages.Add((info, b, null!));
+            _pages.Add((id, b, null!));
         }
         nav.Resize += (_, _) => { foreach (Control c in nav.Controls) c.Width = nav.ClientSize.Width; };
 
@@ -588,28 +677,29 @@ internal sealed class MainForm : Form
     {
         for (var i = 0; i < _pages.Count; i++)
         {
-            var info = _pages[i].info;
-            var inner = info.Id == "live" ? BuildLivePage(info) : BuildOptionsPage(info);
+            var id = _pages[i].id;
+            var inner = id == "live" ? BuildLivePage(id) : BuildOptionsPage(id);
             inner.Dock = DockStyle.Fill;
             inner.Visible = false;
             content.Controls.Add(inner);
-            _pages[i] = (info, _pages[i].nav, inner);
+            _pages[i] = (id, _pages[i].nav, inner);
         }
     }
 
-    private Control Heading(PageInfo info)
+    private Control Heading(string id)
     {
         var p = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg, Margin = Padding.Empty };
-        var h = new Label { Text = info.Heading, Font = Theme.Font(18f, FontStyle.Bold), ForeColor = Theme.Text, AutoSize = true, Location = new Point(0, 0), BackColor = Theme.Bg };
-        var l = new Label { Text = info.Lead, Font = Theme.Font(10f), ForeColor = Theme.Dim, AutoSize = true, BackColor = Theme.Bg };
+        var h = new Label { Text = L.T($"p.{id}.h"), Font = Theme.Font(18f, FontStyle.Bold), ForeColor = Theme.Text, AutoSize = true, Location = new Point(0, 0), BackColor = Theme.Bg };
+        var l = new Label { Text = L.T($"p.{id}.l"), Font = Theme.Font(10f), ForeColor = Theme.Dim, AutoSize = true, BackColor = Theme.Bg };
         p.Controls.AddRange(new Control[] { h, l });
         void Place() { var k = Theme.K(p); l.Location = new Point(0, h.Bottom + (int)(2 * k)); }
         p.Resize += (_, _) => Place();
         p.HandleCreated += (_, _) => Place();
+        _relang.Add(() => { h.Text = L.T($"p.{id}.h"); l.Text = L.T($"p.{id}.l"); Place(); });
         return p;
     }
 
-    private Control BuildLivePage(PageInfo info)
+    private Control BuildLivePage(string id)
     {
         var t = new DbTable { ColumnCount = 1, RowCount = 5 };
         t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -624,27 +714,28 @@ internal sealed class MainForm : Form
             t.RowStyles[0].Height = 78 * k; t.RowStyles[2].Height = 40 * k; t.RowStyles[3].Height = 112 * k; t.RowStyles[4].Height = 70 * k;
         };
 
-        t.Controls.Add(Heading(info), 0, 0);
+        t.Controls.Add(Heading(id), 0, 0);
 
         _big = new KeyPreview { Dock = DockStyle.Fill, Margin = new Padding(0, 4, 0, 10) };
         t.Controls.Add(_big, 0, 1);
 
         var lab = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg, Margin = Padding.Empty };
-        var lt = new Label { Text = "STILE DELL'ONDA", Font = Theme.Font(9.5f, FontStyle.Bold), ForeColor = Theme.Dim, AutoSize = true, BackColor = Theme.Bg };
+        var lt = new Label { Text = L.T("live.style"), Font = Theme.Font(9.5f, FontStyle.Bold), ForeColor = Theme.Dim, AutoSize = true, BackColor = Theme.Bg };
         var ii = new InfoIcon { BackColor = Theme.Bg };
-        _tip.SetToolTip(ii, "SMOOTH: i nuovi colori si sciolgono dolcemente dal centro verso l'esterno, con un bagliore sul fronte.\n\nBARRIER: una fascia sottile di tasti spenti attraversa la tastiera dal centro. Dietro la fascia compaiono subito i nuovi colori, davanti restano i vecchi.");
+        _tip.SetToolTip(ii, L.T("live.style.tip"));
         lab.Controls.AddRange(new Control[] { lt, ii });
         void PlaceLab() { var k = Theme.K(lab); lt.Location = new Point(0, (int)(12 * k)); ii.Location = new Point(lt.Right + (int)(8 * k), (int)(10 * k)); }
         lab.Resize += (_, _) => PlaceLab();
         lab.HandleCreated += (_, _) => PlaceLab();
+        _relang.Add(() => { lt.Text = L.T("live.style"); _tip.SetToolTip(ii, L.T("live.style.tip")); PlaceLab(); });
         t.Controls.Add(lab, 0, 2);
 
         var cards = new DbTable { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1 };
         cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         cards.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         cards.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-        var smooth = new StyleCard("smooth", "SMOOTH", "Dissolvenza morbida con bagliore") { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 8, 0) };
-        var barrier = new StyleCard("barrier", "BARRIER", "Fronte netto con fascia di tasti spenti") { Dock = DockStyle.Fill, Margin = new Padding(8, 0, 0, 0) };
+        var smooth = new StyleCard("smooth", "SMOOTH") { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 8, 0) };
+        var barrier = new StyleCard("barrier", "BARRIER") { Dock = DockStyle.Fill, Margin = new Padding(8, 0, 0, 0) };
         foreach (var c in new[] { smooth, barrier })
         {
             c.Click += (_, _) => SelectStyle(c.Kind, save: true);
@@ -656,41 +747,43 @@ internal sealed class MainForm : Form
 
         var wave = new Button
         {
-            Text = "ANTEPRIMA ONDA", FlatStyle = FlatStyle.Flat, BackColor = Theme.Accent, ForeColor = Theme.Bg,
+            Text = L.T("btn.wave"), FlatStyle = FlatStyle.Flat, BackColor = Theme.Accent, ForeColor = Theme.Bg,
             Font = Theme.Font(10.5f, FontStyle.Bold), Cursor = Cursors.Hand, Size = new Size(230, 44)
         };
         wave.FlatAppearance.BorderSize = 0;
         wave.Click += (_, _) => Live.RequestWave();
-        _tip.SetToolTip(wave, "Lancia subito l'onda con i colori dell'ultima finestra attiva, senza dover cambiare finestra. Utile per provare le impostazioni.");
+        _tip.SetToolTip(wave, L.T("btn.wave.tip"));
         var brow = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Bg, Margin = Padding.Empty };
         brow.Controls.Add(wave);
         void PlaceBtn()
         {
             var k = Theme.K(brow);
-            wave.Size = new Size((int)(230 * k), (int)(44 * k));
+            var tw = TextRenderer.MeasureText(wave.Text, wave.Font, new Size(int.MaxValue, 0), TextFormatFlags.NoPadding).Width;
+            wave.Size = new Size(Math.Max((int)(230 * k), tw + (int)(48 * k)), (int)(44 * k));
             wave.Location = new Point(0, Math.Max(0, (brow.Height - wave.Height) / 2));
         }
         brow.Resize += (_, _) => PlaceBtn();
         brow.HandleCreated += (_, _) => PlaceBtn();
+        _relang.Add(() => { wave.Text = L.T("btn.wave"); _tip.SetToolTip(wave, L.T("btn.wave.tip")); PlaceBtn(); });
         t.Controls.Add(brow, 0, 4);
         return t;
     }
 
-    private Control BuildOptionsPage(PageInfo info)
+    private Control BuildOptionsPage(string id)
     {
         var t = new DbTable { ColumnCount = 1, RowCount = 2 };
         t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         t.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
         t.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         t.HandleCreated += (_, _) => t.RowStyles[0].Height = 78 * Theme.K(t);
-        t.Controls.Add(Heading(info), 0, 0);
+        t.Controls.Add(Heading(id), 0, 0);
 
         var flow = new DbFlow { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
         flow.MouseEnter += (_, _) => flow.Focus();
         var rows = new List<OptionRow>();
-        foreach (var o in Options().Where(x => x.Page == info.Id))
+        foreach (var o in Options().Where(x => x.Page == id))
         {
-            var row = new OptionRow(o.Caption, o.Help, o.Min, o.Max, o.Get(_cfg), o.Fmt, _tip) { Margin = new Padding(0, 0, 0, 10) };
+            var row = new OptionRow(o.Key, o.Min, o.Max, o.Get(_cfg), o.Fmt, _tip) { Margin = new Padding(0, 0, 0, 10) };
             var opt = o;
             row.Changed += v => { opt.Set(_cfg, v); _cfg.Clamp(); Queue(opt.Key, F(opt.Get(_cfg))); };
             row.MouseEnter += (_, _) => flow.Focus();
@@ -717,9 +810,9 @@ internal sealed class MainForm : Form
 
     private void SelectPage(string id)
     {
-        foreach (var (info, nav, page) in _pages)
+        foreach (var (pid, nav, page) in _pages)
         {
-            var on = info.Id == id;
+            var on = pid == id;
             nav.Selected = on; nav.Invalidate();
             page.Visible = on;
         }
@@ -732,7 +825,7 @@ internal sealed class MainForm : Form
         {
             if (o.AppliesTo.Length == 0) continue;
             var ok = _cfg.WaveStyle == o.AppliesTo;
-            row.SetApplies(ok, ok ? "" : $"solo stile {o.AppliesTo.ToUpperInvariant()}");
+            row.SetApplies(ok, ok ? "" : L.T("n.only", o.AppliesTo.ToUpperInvariant()));
         }
     }
 
@@ -748,7 +841,7 @@ internal sealed class MainForm : Form
         if (save) Queue("WaveStyle", $"\"{kind}\"");
     }
 
-    // ------------------------------------------------------------ salvataggio
+    // ------------------------------------------------------------ saving
 
     private void Queue(string key, string value)
     {
@@ -763,7 +856,7 @@ internal sealed class MainForm : Form
         _pending.Clear();
     }
 
-    // ------------------------------------------------------------ avvio automatico
+    // ------------------------------------------------------------ autostart
 
     private string StartupLink => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), "LegionChromaFlow.lnk");
 
@@ -781,7 +874,7 @@ internal sealed class MainForm : Form
             l.WorkingDirectory = _paths.Root;
             l.Save();
         }
-        catch (Exception ex) { Log.Warn($"Avvio automatico non modificato: {ex.Message}"); }
+        catch (Exception ex) { Log.Warn($"Autostart not changed: {ex.Message}"); }
     }
 
     // ------------------------------------------------------------ tray
@@ -789,23 +882,18 @@ internal sealed class MainForm : Form
     private void BuildTray()
     {
         var menu = new ContextMenuStrip { Renderer = new ToolStripProfessionalRenderer(new DarkColors()), BackColor = Color.FromArgb(24, 24, 28), ForeColor = Theme.Text, ShowImageMargin = false, Font = Theme.Font(9.5f) };
-        var open = new ToolStripMenuItem("Apri impostazioni") { Font = Theme.Font(9.5f, FontStyle.Bold) };
-        open.Click += (_, _) => ShowPanel();
+        _miOpen.Font = Theme.Font(9.5f, FontStyle.Bold);
+        _miOpen.Click += (_, _) => ShowPanel();
 
-        var style = new ToolStripMenuItem("Stile onda");
-        _miSmooth.Text = "Smooth - dissolvenza morbida";
-        _miBarrier.Text = "Barrier - fascia di tasti spenti";
         _miSmooth.Click += (_, _) => SelectStyle("smooth", true);
         _miBarrier.Click += (_, _) => SelectStyle("barrier", true);
-        style.DropDownItems.AddRange(new ToolStripItem[] { _miSmooth, _miBarrier });
+        _miStyle.DropDownItems.AddRange(new ToolStripItem[] { _miSmooth, _miBarrier });
 
-        var wave = new ToolStripMenuItem("Anteprima onda");
-        wave.Click += (_, _) => Live.RequestWave();
-        var exit = new ToolStripMenuItem("Esci (ripristina le luci)");
-        exit.Click += (_, _) => ExitApp();
+        _miWave.Click += (_, _) => Live.RequestWave();
+        _miExit.Click += (_, _) => ExitApp();
 
-        menu.Items.AddRange(new ToolStripItem[] { open, new ToolStripSeparator(), style, wave, _miAuto, new ToolStripSeparator(), exit });
-        foreach (ToolStripItem i in style.DropDownItems) { i.BackColor = Color.FromArgb(24, 24, 28); i.ForeColor = Theme.Text; }
+        menu.Items.AddRange(new ToolStripItem[] { _miOpen, new ToolStripSeparator(), _miStyle, _miWave, _miAuto, new ToolStripSeparator(), _miExit });
+        foreach (ToolStripItem i in _miStyle.DropDownItems) { i.BackColor = Color.FromArgb(24, 24, 28); i.ForeColor = Theme.Text; }
 
         _tray.Icon = Icon;
         _tray.ContextMenuStrip = menu;
@@ -851,7 +939,7 @@ internal sealed class MainForm : Form
         return Icon.FromHandle(bmp.GetHicon());
     }
 
-    // ------------------------------------------------------------ finestra
+    // ------------------------------------------------------------ window
 
     public void ShowPanel()
     {
@@ -876,7 +964,7 @@ internal sealed class MainForm : Form
     {
         if (_hideFirst) value = false;
         base.SetVisibleCore(value);
-        // Avviato da un .vbs nascosto, Windows ignora il primo "mostra": lo ripeto esplicitamente.
+        // Started from a hidden .vbs, Windows ignores the first "show": repeat it explicitly.
         if (value && IsHandleCreated) ShowWindow(Handle, 1);
     }
 
@@ -889,7 +977,7 @@ internal sealed class MainForm : Form
             if (!_balloonShown)
             {
                 _balloonShown = true;
-                _tray.ShowBalloonTip(3000, "LegionChromaFlow", "Continua a lavorare qui: clic sull'icona per riaprire il pannello.", ToolTipIcon.Info);
+                _tray.ShowBalloonTip(3000, "LegionChromaFlow", L.T("balloon"), ToolTipIcon.Info);
             }
             return;
         }
@@ -901,7 +989,7 @@ internal sealed class MainForm : Form
         base.OnHandleCreated(e);
         var dark = 1;
         DwmSetWindowAttribute(Handle, 20, ref dark, 4);
-        var cap = 0x0D0B0B; // COLORREF (BGR) del colore di sfondo
+        var cap = 0x0D0B0B; // COLORREF (BGR) of the background color
         DwmSetWindowAttribute(Handle, 35, ref cap, 4);
     }
 
@@ -919,7 +1007,7 @@ internal static class Gui
         using var mutex = new Mutex(true, Program.MutexName, out var created);
         if (!created)
         {
-            // Esiste gia' un'istanza: le chiedo di mostrare il pannello.
+            // An instance already exists: ask it to show the panel.
             try { using var ev = EventWaitHandle.OpenExisting(Program.ShowEventName); ev.Set(); } catch { }
             return 0;
         }
@@ -931,7 +1019,8 @@ internal static class Gui
         try { System.Diagnostics.Process.GetCurrentProcess().PriorityClass = System.Diagnostics.ProcessPriorityClass.BelowNormal; } catch { }
 
         var cfg = Config.Load(paths.ConfigPath);
-        Log.Info($"Avvio pannello. Config: {paths.ConfigPath}");
+        L.Init(cfg.Language);
+        Log.Info($"Starting panel. Config: {paths.ConfigPath}");
 
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
@@ -941,7 +1030,7 @@ internal static class Gui
         var engine = new Thread(() =>
         {
             try { Program.RunLoop(cfg, stop, test: false); }
-            catch (Exception ex) { Log.Error($"Motore luci terminato: {ex}"); }
+            catch (Exception ex) { Log.Error($"Lighting engine stopped: {ex}"); }
         }) { IsBackground = true, Name = "LegionChromaFlow.Engine" };
         engine.Start();
 
@@ -966,7 +1055,7 @@ internal static class Gui
 
         stop.Set();
         engine.Join(8000);
-        Log.Info("Terminato.");
+        Log.Info("Finished.");
         return 0;
     }
 }

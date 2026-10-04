@@ -1,4 +1,4 @@
 @echo off
-rem Ferma l'istanza in background e ripristina le luci del profilo
+rem Stops the background instance and restores the lighting profile
 cd /d "%~dp0"
 dotnet bin\LegionChromaFlow.dll stop

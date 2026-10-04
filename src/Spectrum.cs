@@ -1,9 +1,9 @@
 namespace LegionChromaFlow;
 
 /// <summary>
-/// Protocollo della tastiera Lenovo Legion Spectrum (per-key RGB), ricavato dal codice di
-/// Lenovo Legion Toolkit (LenovoLegionToolkit-Team). Tutti i report sono feature report da 960 byte,
-/// con intestazione { 0x07, tipo, 0xC0, 0x03 }.
+/// Protocol of the Lenovo Legion Spectrum (per-key RGB) keyboard, derived from the code of
+/// Lenovo Legion Toolkit (LenovoLegionToolkit-Team). All reports are 960-byte feature reports,
+/// with header { 0x07, type, 0xC0, 0x03 }.
 /// </summary>
 internal sealed class SpectrumDevice : IDisposable
 {
@@ -31,7 +31,7 @@ internal sealed class SpectrumDevice : IDisposable
 
     public void Dispose() => _hid.Dispose();
 
-    /// <summary>Trova e apre la tastiera Spectrum. Restituisce null se non e' presente/compatibile.</summary>
+    /// <summary>Finds and opens the Spectrum keyboard. Returns null if it is missing or not compatible.</summary>
     public static SpectrumDevice? Open()
     {
         var candidates = HidDevice.Enumerate(LenovoVendorId, ReportLength);
@@ -94,19 +94,19 @@ internal sealed class SpectrumDevice : IDisposable
     {
         var count = SetAndGet(Request(OpKeyCount, 7));
         if (count is null)
-            throw new InvalidOperationException("Impossibile leggere il numero di tasti.");
+            throw new InvalidOperationException("Cannot read the key count.");
 
         var rows = count[5];     // Indexes
-        var cols = Math.Min((int)count[6], 32);  // KeysPerIndex (max 32 per pagina)
+        var cols = Math.Min((int)count[6], 32);  // KeysPerIndex (max 32 per page)
         if (rows == 0 || cols == 0)
-            throw new InvalidOperationException($"Mappa tasti non valida (righe={rows}, colonne={cols}).");
+            throw new InvalidOperationException($"Invalid key map (rows={rows}, columns={cols}).");
 
         var keys = new ushort[cols, rows];
         for (var y = 0; y < rows; y++)
         {
             var page = SetAndGet(Request(OpKeyPage, 7, (byte)y));
             if (page is null)
-                throw new InvalidOperationException($"Impossibile leggere la pagina tasti {y}.");
+                throw new InvalidOperationException($"Cannot read key page {y}.");
             for (var x = 0; x < cols; x++)
                 keys[x, y] = ReadItemKeyCode(page, x);
         }
@@ -128,7 +128,7 @@ internal sealed class SpectrumDevice : IDisposable
         ExtraKeyCodes = extra.ToArray();
     }
 
-    // Ogni elemento della pagina e' { byte indice, ushort codice } a partire dal byte 6.
+    // Each page item is { byte index, ushort code } starting at byte 6.
     private static ushort ReadItemKeyCode(byte[] page, int i)
         => (ushort)(page[7 + 3 * i] | (page[8 + 3 * i] << 8));
 
@@ -136,7 +136,7 @@ internal sealed class SpectrumDevice : IDisposable
     {
         var resp = SetAndGet(Request(OpGetProfile));
         if (resp is null)
-            throw new InvalidOperationException("Impossibile leggere il profilo attivo.");
+            throw new InvalidOperationException("Cannot read the active profile.");
         return resp[4];
     }
 
@@ -144,7 +144,7 @@ internal sealed class SpectrumDevice : IDisposable
 
     public bool AuroraStop(int profile) => _hid.SetFeature(Request(OpAuroraStartStop, 2, (byte)profile));
 
-    /// <summary>Invia un fotogramma: per ogni tasto { codice (LE), R, G, B }.</summary>
+    /// <summary>Sends one frame: for every key { code (LE), R, G, B }.</summary>
     public bool SendFrame(IReadOnlyList<ushort> codes, byte[] rgb, int count)
     {
         var buf = new byte[ReportLength];

@@ -1,5 +1,5 @@
 @echo off
-rem Diagnostica: non cambia le luci
+rem Diagnostics: does not change the lights
 cd /d "%~dp0"
 dotnet bin\LegionChromaFlow.dll probe
 echo.

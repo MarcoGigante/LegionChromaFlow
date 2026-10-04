@@ -2,10 +2,10 @@ namespace LegionChromaFlow;
 
 /// <summary>
 /// Calcola i colori dei tasti.
-///  - Base: lo sfondo del desktop, che scorre/ondeggia lentamente e in modo casuale sulla tastiera.
-///  - Influenza: i colori della finestra attiva, miscelati in modo lieve (WindowInfluence) e
-///    solo dove la finestra ha davvero colore. Quando cambia la finestra, il nuovo colore si propaga
-///    come un'onda dal centro della tastiera verso l'esterno.
+///  - Base: the desktop wallpaper, slowly and randomly drifting/swaying across the keyboard.
+///  - Influence: the colors of the active window, blended in lightly (WindowInfluence) and
+///    only where the window really has color. When the window changes, the new color spreads
+///    as a wave from the center of the keyboard outwards.
 /// </summary>
 internal sealed class FlowEngine
 {
@@ -16,16 +16,16 @@ internal sealed class FlowEngine
 
     private readonly int _n;
     private readonly ushort[] _codes;
-    private readonly float[] _nx, _ny, _dist; // posizioni normalizzate e distanza dal centro (0..1)
+    private readonly float[] _nx, _ny, _dist; // normalized positions and distance from the center (0..1)
 
-    // Influenza della finestra, per tasto, in formato premoltiplicato (r*w, g*w, b*w, w)
+    // Window influence, per key, premultiplied (r*w, g*w, b*w, w)
     private readonly float[] _prev, _target, _infl, _tgtSm;
     private double _lastRender = double.NegativeInfinity;
     private bool _haveTarget;
     private double _waveStart = double.NegativeInfinity;
     private bool _waveActive;
 
-    // Fasi casuali per il moto dello sfondo
+    // Random phases for the wallpaper motion
     private readonly double[] _ph = new double[8];
 
     private sealed class Ripple { public float X, Y; public double T0; }
@@ -86,8 +86,8 @@ internal sealed class FlowEngine
     public void SetWallpaper(Field wallpaper) => _wall = wallpaper;
 
     /// <summary>
-    /// Aggiorna la finestra attiva. changed=true avvia l'onda dal centro.
-    /// win=null significa "nessun colore disponibile" (desktop, finestra non leggibile).
+    /// Updates the active window. changed=true starts the wave from the center.
+    /// win=null means "no color available" (desktop, unreadable window).
     /// </summary>
     public void UpdateWindow(Field? win, bool changed, double now)
     {
@@ -107,20 +107,20 @@ internal sealed class FlowEngine
             for (var c = 0; c < 4; c++)
             {
                 var idx = i * 4 + c;
-                // Alla prima lettura o al cambio finestra il bersaglio e' netto; altrimenti si smussa.
+                // On first read or window change the target is sharp; otherwise it is smoothed.
                 _target[idx] = (changed || !_haveTarget) ? s[c] : _target[idx] + (s[c] - _target[idx]) * 0.4f;
             }
         }
-        if (changed || !_haveTarget) Array.Copy(_target, _tgtSm, _target.Length); // nuova finestra: scatto netto, ci pensa l'onda
+        if (changed || !_haveTarget) Array.Copy(_target, _tgtSm, _target.Length); // new window: hard snap, the wave handles the transition
         _haveTarget = true;
     }
 
-    /// <summary>Calcola un fotogramma. rgb deve contenere almeno KeyCount*3 byte.</summary>
+    /// <summary>Computes one frame. rgb must hold at least KeyCount*3 bytes.</summary>
     public void Render(double now, byte[] rgb, out byte extraR, out byte extraG, out byte extraB)
     {
         var cfg = _cfg;
 
-        // Il bersaglio della finestra viene inseguito con una costante di tempo: meno scatti, luci piu' fluide.
+        // The window target is chased with a time constant: fewer steps, smoother lights.
         var dt = double.IsNegativeInfinity(_lastRender) ? 0.0 : Math.Clamp(now - _lastRender, 0.0, 0.5);
         _lastRender = now;
         var follow = cfg.WindowFollowSeconds;
@@ -131,17 +131,17 @@ internal sealed class FlowEngine
         var barrier = cfg.WaveStyle == "barrier";
         var band = (float)(barrier ? cfg.BarrierWidth : cfg.WaveBand);
 
-        // Avanzamento dell'onda
+        // Wave progress
         float waveR = 0f;
         if (_waveActive)
         {
             var p = (now - _waveStart) / T;
             waveR = (float)(p * (1.0 + band));
-            if (barrier) waveR -= band / 2f; // il centro della barriera parte prima del centro e finisce oltre il bordo
+            if (barrier) waveR -= band / 2f; // the barrier center starts before the keyboard center and ends past the edge
             if (p >= 1.0 + 0.05) _waveActive = false;
         }
 
-        // Onde casuali di luce
+        // Random ripples of light
         if (cfg.RandomRippleEverySeconds > 0 && now >= _nextRipple)
         {
             var i = _rnd.Next(_n);
@@ -150,7 +150,7 @@ internal sealed class FlowEngine
         }
         _ripples.RemoveAll(r => now - r.T0 > 3.0);
 
-        // Moto dello sfondo: centro e zoom che vagano lentamente, con una leggera deformazione
+        // Wallpaper motion: center and zoom slowly wander, with a slight warp
         var sp = cfg.DriftSpeed;
         var t = now * sp;
         var ox = 0.5 + 0.36 * Math.Sin(0.110 * t + _ph[0]) + 0.12 * Math.Sin(0.270 * t + _ph[1]);
@@ -165,7 +165,7 @@ internal sealed class FlowEngine
 
         for (var k = 0; k < _n; k++)
         {
-            // ---- Base: sfondo del desktop ----
+            // ---- Base: desktop wallpaper ----
             var warpU = 0.045 * Math.Sin(_ny[k] * 6.0 + now * 0.55 * Math.Max(sp, 0.05) + _ph[5]);
             var warpV = 0.045 * Math.Sin(_nx[k] * 5.0 - now * 0.45 * Math.Max(sp, 0.05) + _ph[6]);
             var u = (float)(ox + (_nx[k] - 0.5) * scaleX + warpU);
@@ -173,7 +173,7 @@ internal sealed class FlowEngine
             _wall.Sample(u, v, true, c3);
             float r = c3[0], g = c3[1], b = c3[2];
 
-            // Sfarfallio leggero e casuale tra un tasto e l'altro
+            // Slight random shimmer from key to key
             if (cfg.Shimmer > 0)
             {
                 var sh = 1.0 + cfg.Shimmer * (0.6 * Math.Sin(now * 0.9 + k * 1.713 + _ph[7])
@@ -181,25 +181,25 @@ internal sealed class FlowEngine
                 r *= (float)sh; g *= (float)sh; b *= (float)sh;
             }
 
-            // Onde casuali: leggero aumento di luminosita' sul fronte
+            // Random ripples: slight brightness boost on the front
             var gain = 1.0f;
             foreach (var rp in _ripples)
             {
                 var age = now - rp.T0;
                 var rad = age * 0.55;
-                var dx = _nx[k] - rp.X; var dy = (_ny[k] - rp.Y) * 0.55; // la tastiera e' piu' larga che alta
+                var dx = _nx[k] - rp.X; var dy = (_ny[k] - rp.Y) * 0.55; // the keyboard is wider than tall
                 var d = Math.Sqrt(dx * dx + dy * dy);
                 var e = (d - rad) / 0.14;
                 gain += (float)(0.30 * (1.0 - age / 3.0) * Math.Exp(-e * e));
             }
             r *= gain; g *= gain; b *= gain;
 
-            // ---- Influenza della finestra attiva ----
+            // ---- Active window influence ----
             float ir, ig, ib, iw;
             var dark = 1f;
             if (_waveActive)
             {
-                // barrier: passaggio netto dentro/fuori dal fronte; smooth: dissolvenza morbida
+                // barrier: hard step inside/outside the front; smooth: soft dissolve
                 var a = barrier ? (_dist[k] <= waveR ? 1f : 0f) : Smooth((waveR - _dist[k]) / band);
                 var j = k * 4;
                 iw = _prev[j + 3] + (_tgtSm[j + 3] - _prev[j + 3]) * a;
@@ -207,10 +207,10 @@ internal sealed class FlowEngine
                 ig = _prev[j + 1] + (_tgtSm[j + 1] - _prev[j + 1]) * a;
                 ib = _prev[j + 2] + (_tgtSm[j + 2] - _prev[j + 2]) * a;
 
-                // Fronte d'onda luminoso
+                // Glowing wave front
                 if (barrier)
                 {
-                    // Barriera di tasti spenti centrata sul fronte
+                    // Band of switched-off keys centered on the front
                     var off = Math.Abs(_dist[k] - waveR) / (band / 2f);
                     dark = Smooth(off);
                 }
@@ -231,7 +231,7 @@ internal sealed class FlowEngine
 
             if (iw > 1e-4f && cfg.WindowInfluence > 0)
             {
-                // ir,ig,ib sono premoltiplicati: il colore reale e' ir/iw, il peso e' iw.
+                // ir,ig,ib are premultiplied: the real color is ir/iw, the weight is iw.
                 var m = (float)(cfg.WindowInfluence * Math.Clamp(iw, 0f, 1f));
                 r += (ir / iw - r) * m;
                 g += (ig / iw - g) * m;
@@ -240,7 +240,7 @@ internal sealed class FlowEngine
 
             if (dark < 1f) { r *= dark; g *= dark; b *= dark; }
 
-            // ---- Rifinitura: saturazione, luminosita', gamma ----
+            // ---- Finishing: saturation, brightness, gamma ----
             var luma = 0.299f * r + 0.587f * g + 0.114f * b;
             var sat = (float)cfg.Saturation;
             r = luma + (r - luma) * sat;
@@ -255,7 +255,7 @@ internal sealed class FlowEngine
             sr += r; sg += g; sb += b;
         }
 
-        // Luci extra della tastiera (bordo/logo): colore medio, smussato
+        // Extra keyboard lights (edge/logo): average color, smoothed
         if (_n > 0)
         {
             var ar = (float)(sr / _n); var ag = (float)(sg / _n); var ab = (float)(sb / _n);

@@ -1,9 +1,14 @@
 namespace LegionChromaFlow;
 
-/// <summary>Stato condiviso tra il motore luci (thread in background) e il pannello grafico.</summary>
+/// <summary>State shared between the lighting engine (background thread) and the control panel.</summary>
 internal static class Live
 {
-    public static volatile string Status = "Avvio...";
+    private static string _statusKey = "starting";
+    private static object[] _statusArgs = Array.Empty<object>();
+
+    public static void SetStatus(string key, params object[] args) { _statusArgs = args; _statusKey = key; }
+    public static string StatusText => L.T("status." + _statusKey, _statusArgs);
+    public static bool StatusOk => _statusKey is "connected" or "active";
 
     private static int _wave;
     public static void RequestWave() => Interlocked.Exchange(ref _wave, 1);

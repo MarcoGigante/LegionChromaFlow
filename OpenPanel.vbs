@@ -1,4 +1,4 @@
-' Apre il pannello di controllo (o lo porta in primo piano se e' gia' avviato)
+' Opens the control panel (or brings it to the front if it is already running)
 Set fso = CreateObject("Scripting.FileSystemObject")
 dir = fso.GetParentFolderName(WScript.ScriptFullName)
 Set sh = CreateObject("WScript.Shell")
