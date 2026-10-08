@@ -85,6 +85,12 @@ Passa il mouse sull'icona tonda **ⓘ** accanto a ogni opzione per vedere cosa f
 
 Dettagli tecnici, riferimento della riga di comando e tabella completa della configurazione: vedi il [README in inglese](README.md).
 
+## Luci fin dall'accensione
+
+Di default l'effetto parte appena accedi (attività all'accesso, quindi senza il ritardo della cartella Esecuzione automatica) e **si riattiva da solo dopo sospensione/ripresa e sblocco**: svegliando il portatile con il tasto di accensione torna l'effetto invece della modalità della tastiera.
+
+Per illuminare la tastiera **ancora prima — alla schermata di avvio/blocco di Windows, prima che qualcuno acceda** — esegui una volta `install-boot.bat` (chiede i permessi di amministratore e installa un'attività all'avvio che gira come SYSTEM). L'istanza di avvio usa una piccola copia in cache dello sfondo (salvata ogni volta che il pannello è in esecuzione) e passa il testimone al pannello all'accesso senza sfarfallii. Si rimuove con `uninstall-boot.bat`. La fase di firmware/BIOS prima del caricamento di Windows non può essere modificata via software.
+
 ## Scene AI (opzionali)
 
 Attiva **AI** nel pannello e Claude crea una scena di luci — palette, motivo (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), velocità e intensità — per la finestra che stai guardando. La scena si sovrappone agli effetti dello sfondo e dei colori della finestra e sfuma quando cambi finestra.

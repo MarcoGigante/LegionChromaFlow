@@ -85,6 +85,12 @@ Pasa el ratón por el icono redondo **ⓘ** junto a cada opción para ver qué h
 
 Detalles técnicos, referencia de línea de comandos y tabla completa de configuración: consulta el [README en inglés](README.md).
 
+## Luces desde el encendido
+
+Por defecto el efecto arranca en cuanto inicias sesión (una tarea al iniciar sesión, sin el retraso de la carpeta Inicio) y **se reactiva solo tras suspender/reanudar y desbloquear**, de modo que al despertar el portátil con el botón de encendido vuelve el efecto en lugar del modo propio del teclado.
+
+Para iluminar el teclado **aún antes —en la pantalla de inicio/bloqueo de Windows, antes de que nadie inicie sesión—** ejecuta una vez `install-boot.bat` (pide permisos de administrador e instala una tarea de inicio que se ejecuta como SYSTEM). La instancia de arranque usa una pequeña copia en caché de tu fondo (se guarda cada vez que el panel se ejecuta) y cede el control al panel al iniciar sesión sin parpadeos. Se quita con `uninstall-boot.bat`. La fase de firmware/BIOS previa a la carga de Windows no se puede cambiar por software.
+
 ## Escenas con IA (opcionales)
 
 Activa **IA** en el panel y Claude diseña una escena de luces —paleta, patrón (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), velocidad e intensidad— para la ventana que estás mirando. La escena se superpone a los efectos del fondo y de los colores de la ventana, y se funde al cambiar de ventana.

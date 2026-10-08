@@ -31,6 +31,7 @@ internal static class Program
                 "gui" => Gui.Run(paths, startHidden: args.Skip(1).Any(a => a.TrimStart('-', '/').Equals("tray", StringComparison.OrdinalIgnoreCase))),
                 "test" => Run(paths, test: true),
                 "probe" => Probe(paths),
+                "boot" => Boot(paths),
                 "stop" => Stop(),
                 _ => Help()
             };
@@ -49,10 +50,32 @@ internal static class Program
 
               gui     opens the control panel with a tray icon (gui tray = start hidden)
               run     (default) starts the effect
+              boot    pre-sign-in lighting (used by the optional boot task, see install-boot.bat)
               probe   diagnostics: shows keyboard, keys, profile, wallpaper and active window (does not change the lights)
               test    quick test: solid red, green, blue for a few seconds, then restores
               stop    stops the running instance
             """);
+        return 0;
+    }
+
+    /// <summary>Pre-sign-in instance (runs as SYSTEM from the boot task): lights the keyboard until the panel takes over.</summary>
+    private static int Boot(AppPaths paths)
+    {
+        Live.BootMode = true;
+        Live.KeepOnExit = true;
+        using var mutex = BootHandover.CreateInstanceMutex(out var created);
+        if (!created)
+        {
+            Log.Warn("A boot instance is already running.");
+            return 2;
+        }
+
+        using var stop = BootHandover.CreateStopEvent();
+        Desktop.EnableDpiAwareness();
+        var cfg = Config.Load(paths.ConfigPath);
+        Log.Info("Boot mode: lighting before sign-in; the panel takes over at sign-in.");
+        RunLoop(cfg, stop, test: false);
+        Log.Info("Boot instance finished.");
         return 0;
     }
 
@@ -152,6 +175,7 @@ internal static class Program
 
     internal static int RunLoop(Config cfg, EventWaitHandle stop, bool test)
     {
+        PowerWatch.Start();
         var announcedMissing = false;
         while (!stop.WaitOne(0))
         {
@@ -263,6 +287,7 @@ internal static class Program
         double nextWall = cfg.WallpaperRecheckSeconds;
 
         long lastHandle = long.MinValue;
+        var resumeQueue = new Queue<double>();
         var lastKind = Desktop.WindowKind.Desktop;
         var failures = 0;
 
@@ -271,6 +296,10 @@ internal static class Program
             while (!stop.WaitOne(0))
             {
                 var now = sw.Elapsed.TotalSeconds;
+
+                // After sleep/resume or unlock the keyboard firmware may fall back to its own mode: re-arm Aurora a few times.
+                if (Live.ConsumeResume()) { resumeQueue.Clear(); foreach (var delay in new[] { 0.0, 0.8, 2.5, 6.0 }) resumeQueue.Enqueue(now + delay); }
+                while (resumeQueue.Count > 0 && now >= resumeQueue.Peek()) { resumeQueue.Dequeue(); dev.AuroraStart(profile); }
 
                 if (now >= nextWin)
                 {
@@ -316,7 +345,8 @@ internal static class Program
         }
         finally
         {
-            try { dev.AuroraStop(profile); Log.Info("Effect stopped, lights restored from the profile."); } catch { }
+            if (Live.KeepOnExit) Log.Info("Session ended, keyboard left in Aurora mode for the next instance.");
+            else try { dev.AuroraStop(profile); Log.Info("Effect stopped, lights restored from the profile."); } catch { }
         }
     }
 
@@ -348,6 +378,11 @@ internal static class Program
 
     private static string WallpaperSignature(Config cfg)
     {
+        if (Live.BootMode)
+        {
+            var cache = BootHandover.WallpaperCachePath;
+            try { return cache + "|" + File.GetLastWriteTimeUtc(cache).Ticks; } catch { return cache; }
+        }
         var path = string.IsNullOrWhiteSpace(cfg.WallpaperOverride) ? Desktop.GetWallpaperPath() : cfg.WallpaperOverride;
         if (string.IsNullOrEmpty(path)) return "";
         try { return path + "|" + File.GetLastWriteTimeUtc(path).Ticks; } catch { return path; }
@@ -355,6 +390,14 @@ internal static class Program
 
     private static Field? LoadWallpaper(Config cfg)
     {
+        if (Live.BootMode)
+        {
+            var cache = BootHandover.WallpaperCachePath;
+            var cached = File.Exists(cache) ? Desktop.LoadImage(cache) : null;
+            Log.Info(cached is null ? "No cached wallpaper yet: using the fallback rainbow." : "Wallpaper loaded from the boot cache.");
+            return cached;
+        }
+
         var path = string.IsNullOrWhiteSpace(cfg.WallpaperOverride) ? Desktop.GetWallpaperPath() : cfg.WallpaperOverride;
         if (string.IsNullOrEmpty(path))
         {
@@ -366,7 +409,7 @@ internal static class Program
         if (f is null)
             Log.Warn($"Cannot read the wallpaper '{path}': using a fallback rainbow.");
         else
-            Log.Info($"Wallpaper read: {path}");
+            { Log.Info($"Wallpaper read: {path}"); Desktop.SaveWallpaperCache(path, BootHandover.WallpaperCachePath); }
         return f;
     }
 }

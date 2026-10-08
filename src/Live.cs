@@ -31,6 +31,16 @@ internal static class Live
     public static void RequestWave() => Interlocked.Exchange(ref _wave, 1);
     public static bool ConsumeWave() => Interlocked.Exchange(ref _wave, 0) == 1;
 
+    /// <summary>True in the pre-sign-in instance started by the boot task.</summary>
+    public static volatile bool BootMode;
+
+    /// <summary>When set, the keyboard is left in Aurora mode at the end of a session (used for the boot -> panel handover).</summary>
+    public static volatile bool KeepOnExit;
+
+    private static int _resume;
+    public static void RequestResume() => Interlocked.Exchange(ref _resume, 1);
+    public static bool ConsumeResume() => Interlocked.Exchange(ref _resume, 0) == 1;
+
     private static readonly object Gate = new();
     private static float[] _xs = Array.Empty<float>(), _ys = Array.Empty<float>();
     private static byte[] _rgb = Array.Empty<byte>();

@@ -85,6 +85,12 @@ Fahren Sie mit der Maus über das runde **ⓘ** neben einer Option, um zu sehen,
 
 Technische Details, Kommandozeilen-Referenz und die vollständige Konfigurationstabelle: siehe die [englische README](README.md).
 
+## Licht ab dem Einschalten
+
+Standardmäßig startet der Effekt direkt bei der Anmeldung (Aufgabe bei der Anmeldung, daher ohne die Verzögerung des Autostart-Ordners) und **aktiviert sich nach Standby/Fortsetzen und Entsperren selbst neu**: Wird der Laptop mit dem Einschaltknopf geweckt, kehrt der Effekt statt des eigenen Tastaturmodus zurück.
+
+Um die Tastatur **noch früher — auf dem Windows-Start-/Sperrbildschirm, bevor sich jemand anmeldet —** zu beleuchten, führen Sie einmal `install-boot.bat` aus (fragt nach Administratorrechten und richtet eine Startaufgabe ein, die als SYSTEM läuft). Die Boot-Instanz verwendet eine kleine zwischengespeicherte Kopie Ihres Hintergrundbilds (gespeichert, sobald das Bedienfeld läuft) und übergibt bei der Anmeldung ohne Flackern an das Bedienfeld. Entfernen mit `uninstall-boot.bat`. Die Firmware-/BIOS-Phase vor dem Laden von Windows lässt sich per Software nicht ändern.
+
 ## KI-Szenen (optional)
 
 Aktivieren Sie **KI** im Bedienfeld, und Claude entwirft eine Lichtszene — Palette, Muster (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), Tempo und Intensität — für das Fenster, das Sie gerade ansehen. Die Szene legt sich über die Effekte von Hintergrund und Fensterfarben und blendet beim Fensterwechsel über.

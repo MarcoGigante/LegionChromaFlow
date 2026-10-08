@@ -1333,6 +1333,7 @@ internal static class Gui
             try { Program.RunLoop(cfg, stop, test: false); }
             catch (Exception ex) { Log.Error($"Lighting engine stopped: {ex}"); }
         }) { IsBackground = true, Name = "LegionChromaFlow.Engine" };
+        BootHandover.StopBootInstance();
         engine.Start();
 
         var watcher = new Thread(() =>

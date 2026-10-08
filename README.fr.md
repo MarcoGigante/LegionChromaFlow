@@ -85,6 +85,12 @@ Survolez l'icône ronde **ⓘ** à côté de chaque option pour voir ce qu'elle 
 
 Détails techniques, référence de la ligne de commande et tableau complet de configuration : voir le [README en anglais](README.md).
 
+## Lumières dès l'allumage
+
+Par défaut, l'effet démarre dès l'ouverture de session (tâche à l'ouverture de session, donc sans le délai du dossier Démarrage) et **se réarme tout seul après la veille/reprise et le déverrouillage** : réveiller le portable avec le bouton d'alimentation ramène l'effet au lieu du mode propre au clavier.
+
+Pour éclairer le clavier **encore plus tôt — à l'écran de démarrage/verrouillage de Windows, avant que quiconque ouvre une session** — lancez une fois `install-boot.bat` (il demande les droits d'administrateur et installe une tâche de démarrage exécutée en tant que SYSTEM). L'instance de démarrage utilise une petite copie en cache de votre fond d'écran (enregistrée à chaque exécution du panneau) et passe la main au panneau à l'ouverture de session sans scintillement. Pour la retirer : `uninstall-boot.bat`. L'étape firmware/BIOS avant le chargement de Windows ne peut pas être modifiée par logiciel.
+
 ## Scènes IA (optionnelles)
 
 Activez **IA** dans le panneau et Claude conçoit une scène lumineuse — palette, motif (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), vitesse et intensité — pour la fenêtre que vous regardez. La scène se superpose aux effets du fond d'écran et des couleurs de la fenêtre, et se fond quand vous changez de fenêtre.

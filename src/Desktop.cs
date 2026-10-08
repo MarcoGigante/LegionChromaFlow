@@ -143,6 +143,29 @@ internal static class Desktop
         return new WindowInfo(WindowKind.Normal, h.ToInt64(), cls);
     }
 
+    /// <summary>Saves a small copy of the wallpaper so the pre-sign-in boot instance can use it.</summary>
+    public static void SaveWallpaperCache(string src, string dst)
+    {
+        try
+        {
+            using var bmp = new System.Drawing.Bitmap(src);
+            var w = Math.Min(480, bmp.Width);
+            var h = Math.Max(1, (int)(bmp.Height * (w / (double)bmp.Width)));
+            using var small = new System.Drawing.Bitmap(w, h);
+            using (var g = System.Drawing.Graphics.FromImage(small))
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.DrawImage(bmp, 0, 0, w, h);
+            }
+            Directory.CreateDirectory(Path.GetDirectoryName(dst)!);
+            var enc = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders().First(e => e.MimeType == "image/jpeg");
+            using var prm = new System.Drawing.Imaging.EncoderParameters(1);
+            prm.Param[0] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 90L);
+            small.Save(dst, enc, prm);
+        }
+        catch (Exception ex) { Log.Warn($"Could not cache the wallpaper for boot mode: {ex.Message}"); }
+    }
+
     /// <summary>Title of a window (empty if it has none).</summary>
     public static string GetTitle(long handle)
     {

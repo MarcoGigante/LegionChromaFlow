@@ -2,6 +2,7 @@ bin/
 obj/
 logs/
 config/ai.key
+config/boot-wallpaper.jpg
 *.log
 *.user
 .vs/

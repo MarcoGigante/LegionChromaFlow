@@ -131,6 +131,12 @@ dotnet bin\LegionChromaFlow.dll <mode>
 
 The project is plain C# / .NET 8 (WinForms for the panel), with no NuGet packages. Source lives in [`src/`](src); `selftest` verifies the effect logic without hardware.
 
+## Lights from power-on
+
+By default the effect starts as soon as you sign in (a logon task, so there is no Startup-folder delay) and **re-arms itself after sleep/resume and unlock**, so waking the laptop with the power button brings the effect back instead of the keyboard's own mode.
+
+To light the keyboard **even earlier — at the Windows start/lock screen, before anyone signs in** — run `install-boot.bat` once (it asks for administrator rights and installs a startup task that runs as SYSTEM). The boot instance uses a small cached copy of your wallpaper (saved whenever the panel runs) and hands over to the panel at sign-in without flicker. Remove it with `uninstall-boot.bat`. The firmware/BIOS stage before Windows loads cannot be changed by software.
+
 ## AI scenes (optional)
 
 Turn on **AI** in the panel and Claude designs a lighting scene — palette, pattern (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), speed and intensity — for whatever window you are looking at. The scene is layered **on top of** the wallpaper and window-color effects, and cross-fades when you switch window.

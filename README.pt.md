@@ -85,6 +85,12 @@ Passe o rato sobre o ícone redondo **ⓘ** junto a cada opção para ver o que 
 
 Detalhes técnicos, referência da linha de comandos e tabela completa de configuração: consulte o [README em inglês](README.md).
 
+## Luzes desde que liga
+
+Por predefinição o efeito arranca assim que inicia sessão (tarefa ao iniciar sessão, sem o atraso da pasta Arranque) e **reativa-se sozinho após suspensão/retoma e desbloqueio**: ao acordar o portátil com o botão de ligar, volta o efeito em vez do modo próprio do teclado.
+
+Para iluminar o teclado **ainda mais cedo — no ecrã de arranque/bloqueio do Windows, antes de alguém iniciar sessão —** execute uma vez `install-boot.bat` (pede permissões de administrador e instala uma tarefa de arranque que corre como SYSTEM). A instância de arranque usa uma pequena cópia em cache do seu fundo (guardada sempre que o painel corre) e passa o controlo ao painel no início de sessão sem cintilações. Remove-se com `uninstall-boot.bat`. A fase de firmware/BIOS antes de o Windows carregar não pode ser alterada por software.
+
 ## Cenas com IA (opcionais)
 
 Ative **IA** no painel e o Claude cria uma cena de luzes — paleta, padrão (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), velocidade e intensidade — para a janela que está a ver. A cena sobrepõe-se aos efeitos do fundo e das cores da janela e esbate-se ao mudar de janela.
