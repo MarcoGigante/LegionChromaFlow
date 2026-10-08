@@ -35,6 +35,15 @@ internal sealed class FlowEngine
     private readonly float[] _avg = new float[3];
     private bool _avgInit;
 
+    // ---- AI scene layer (optional) ----
+    private AiBox? _aiPending;
+    private AiSceneData? _aiCur, _aiPrev;
+    private double _aiMix = 1.0;     // 0 = previous scene, 1 = current scene
+    private double _aiAmount;        // 0 = no AI layer, 1 = full layer (fades in/out)
+
+    /// <summary>Hands a new AI scene (or null = none) to the render loop. Thread-safe.</summary>
+    public void SetAiScene(AiSceneData? scene) => Interlocked.Exchange(ref _aiPending, new AiBox { Data = scene });
+
     public int KeyCount => _n;
     public IReadOnlyList<ushort> KeyCodes => _codes;
     public float[] NormX => _nx;
@@ -126,6 +135,16 @@ internal sealed class FlowEngine
         var follow = cfg.WindowFollowSeconds;
         var alpha = follow <= 0.01 ? 1f : (float)(1.0 - Math.Exp(-dt / follow));
         for (var q = 0; q < _tgtSm.Length; q++) _tgtSm[q] += (_target[q] - _tgtSm[q]) * alpha;
+
+        // AI layer bookkeeping: pick up a new scene and advance the cross-fades.
+        var pend = Interlocked.Exchange(ref _aiPending, null);
+        if (pend is not null) { _aiPrev = _aiCur; _aiCur = pend.Data; _aiMix = 0.0; }
+        var aiFade = Math.Max(0.05, cfg.AiFadeSeconds);
+        _aiMix = Math.Min(1.0, _aiMix + dt / aiFade);
+        var aiTarget = cfg.AiEnabled && _aiCur is not null ? 1.0 : 0.0;
+        _aiAmount += Math.Clamp(aiTarget - _aiAmount, -dt / aiFade, dt / aiFade);
+        var aiOn = cfg.AiStrength > 0 && (_aiAmount > 0.001 || (_aiCur is not null && cfg.AiEnabled));
+        var aiStrength = (float)(cfg.AiStrength * _aiAmount);
 
         var T = cfg.WaveSeconds;
         var barrier = cfg.WaveStyle == "barrier";
@@ -238,6 +257,18 @@ internal sealed class FlowEngine
                 b += (ib / iw - b) * m;
             }
 
+            // ---- AI scene layer: generative pattern designed for what is on screen ----
+            if (aiOn && aiStrength > 0.001f)
+            {
+                var blendTo = _aiCur is null ? new[] { r, g, b } : AiColor(_aiCur, k, now);
+                var blendFrom = _aiPrev is null ? new[] { r, g, b } : AiColor(_aiPrev, k, now);
+                var mix = (float)_aiMix;
+                var ar = blendFrom[0] + (blendTo[0] - blendFrom[0]) * mix;
+                var ag = blendFrom[1] + (blendTo[1] - blendFrom[1]) * mix;
+                var ab = blendFrom[2] + (blendTo[2] - blendFrom[2]) * mix;
+                r += (ar - r) * aiStrength; g += (ag - g) * aiStrength; b += (ab - b) * aiStrength;
+            }
+
             if (dark < 1f) { r *= dark; g *= dark; b *= dark; }
 
             // ---- Finishing: saturation, brightness, gamma ----
@@ -265,6 +296,85 @@ internal sealed class FlowEngine
         extraR = (byte)(Math.Clamp(_avg[0], 0f, 1f) * 255f + 0.5f);
         extraG = (byte)(Math.Clamp(_avg[1], 0f, 1f) * 255f + 0.5f);
         extraB = (byte)(Math.Clamp(_avg[2], 0f, 1f) * 255f + 0.5f);
+    }
+
+    // ---------------------------------------------------------------- AI patterns
+
+    private static float Hash(double x) { var v = Math.Sin(x * 12.9898) * 43758.5453; return (float)(v - Math.Floor(v)); }
+
+    private static float[] Pal(AiSceneData s, double u)
+    {
+        var p = s.Palette;
+        u = Math.Clamp(u, 0, 1) * (p.Length - 1);
+        var i = Math.Min((int)u, p.Length - 2);
+        var f = (float)(u - i);
+        return new[] { p[i][0] + (p[i + 1][0] - p[i][0]) * f, p[i][1] + (p[i + 1][1] - p[i][1]) * f, p[i][2] + (p[i + 1][2] - p[i][2]) * f };
+    }
+
+    /// <summary>Color of key k for an AI scene at time t (0..1 per channel).</summary>
+    private float[] AiColor(AiSceneData? s, int k, double t)
+    {
+        if (s is null) return new[] { 0f, 0f, 0f };
+        var x = _nx[k]; var y = _ny[k]; var d = _dist[k];
+        var sp = 0.25 + 1.5 * s.Speed;
+        float[] c; double v = 1.0;
+
+        switch (s.Pattern)
+        {
+            case "pulse":
+            {
+                var u = 0.5 + 0.5 * Math.Sin(t * 1.6 * sp - d * 7.0);
+                c = Pal(s, u); v = 0.35 + 0.65 * u;
+                break;
+            }
+            case "wave":
+            {
+                var u = 0.5 + 0.5 * Math.Sin(x * 5.0 - t * 1.5 * sp);
+                c = Pal(s, u); v = 0.55 + 0.45 * u;
+                break;
+            }
+            case "sparkle":
+            {
+                var ph = Hash(k);
+                var tw = Math.Pow(Math.Max(0.0, Math.Sin(t * (0.8 + 1.5 * sp) + ph * 6.2832)), 12.0);
+                var spark = Pal(s, 0.45 + 0.55 * Hash(k * 3 + 1));
+                var basec = Pal(s, 0.1);
+                c = new[] { basec[0] * 0.4f + (spark[0] - basec[0] * 0.4f) * (float)tw, basec[1] * 0.4f + (spark[1] - basec[1] * 0.4f) * (float)tw, basec[2] * 0.4f + (spark[2] - basec[2] * 0.4f) * (float)tw };
+                break;
+            }
+            case "rain":
+            {
+                var col = (int)Math.Round(x * 19);
+                var speed = 0.25 * sp * (0.6 + Hash(col));
+                var head = (t * speed + Hash(col * 7 + 3)) % 1.0;
+                var dy = head - y; if (dy < 0) dy += 1.0;          // distance behind the falling head
+                var tail = Math.Exp(-dy * 6.0);
+                var dark = Pal(s, 0.0); var bright = Pal(s, 0.85);
+                c = new[] { dark[0] * 0.25f + (bright[0] - dark[0] * 0.25f) * (float)tail, dark[1] * 0.25f + (bright[1] - dark[1] * 0.25f) * (float)tail, dark[2] * 0.25f + (bright[2] - dark[2] * 0.25f) * (float)tail };
+                break;
+            }
+            case "fire":
+            {
+                var heat = Math.Clamp(1.0 - y * 1.1 + 0.25 * Math.Sin(x * 9.0 + t * 3.0 * sp) + 0.15 * Math.Sin(x * 17.0 - t * 5.0 * sp + Hash(k) * 6.0), 0, 1);
+                c = Pal(s, heat); v = 0.3 + 0.7 * heat;
+                break;
+            }
+            case "breathe":
+            {
+                var u = 0.5 + 0.5 * Math.Sin(t * 0.9 * sp);
+                c = Pal(s, 0.25 + 0.5 * x); v = 0.3 + 0.7 * u;
+                break;
+            }
+            default: // aurora
+            {
+                var u = 0.5 + 0.5 * Math.Sin(x * 2.6 + y * 1.7 + t * 0.5 * sp + 1.3 * Math.Sin(y * 3.0 + t * 0.3 * sp));
+                c = Pal(s, u); v = 0.75 + 0.25 * Math.Sin(t * 0.7 * sp + x * 4.0);
+                break;
+            }
+        }
+
+        var level = (float)((0.4 + 0.6 * s.Intensity) * v);
+        return new[] { c[0] * level, c[1] * level, c[2] * level };
     }
 
     private static float Out(float c, Config cfg)

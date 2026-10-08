@@ -46,6 +46,16 @@
   // Image to use instead of the Windows wallpaper (full path, empty = desktop wallpaper)
   "WallpaperOverride": "",
 
+  // AI scenes (optional, OFF by default). When enabled, a small screenshot of the active window is sent to the
+  // Anthropic API (api.anthropic.com) to design a lighting scene. Needs your own API key (set it in the panel).
+  // Windows whose title contains one of the AiSkipTitles words (comma-separated) are never sent.
+  "AiEnabled": false,
+  "AiStrength": 0.75,
+  "AiMinSeconds": 12,
+  "AiFadeSeconds": 2.0,
+  "AiModel": "claude-haiku-4-5-20251001",
+  "AiSkipTitles": "password,bitwarden,1password,keepass,lastpass,bank,incognito,private browsing,inprivate",
+
   // Spectrum profile to use (0 = the one currently active on the keyboard)
   "Profile": 0
 }

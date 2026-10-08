@@ -30,7 +30,8 @@ Iluminação RGB dinâmica tecla a tecla com um painel de controlo ao estilo Raz
 - 🌍 **7 idiomas** — inglês, italiano, espanhol, francês, alemão, português e chinês simplificado, à escolha no painel.
 - 🔔 **Ícone na área de notificação** — clique esquerdo para mostrar/ocultar o painel, clique direito para o menu rápido.
 - 🔌 **Zero dependências** — usa `hid.dll`, GDI+ e GDI. Só precisa de .NET.
-- 🔒 **Offline e privado** — sem código de rede. Os píxeis das janelas são lidos em memória e nunca guardados.
+- 🤖 **Cenas com IA opcionais** — o Claude pode criar uma cena de luzes (paleta, padrão, velocidade) para a janela que está a ver, para além dos outros efeitos. Desligadas por predefinição; requerem a sua própria chave de API.
+- 🔒 **Offline e privado por predefinição** — nada sai do seu PC a menos que ative as cenas com IA. Os píxeis das janelas são lidos em memória e nunca guardados.
 
 <div align="center">
 <img src="docs/screenshot-window.png" alt="Página de definições das cores da janela" width="760">
@@ -84,6 +85,15 @@ Passe o rato sobre o ícone redondo **ⓘ** junto a cada opção para ver o que 
 
 Detalhes técnicos, referência da linha de comandos e tabela completa de configuração: consulte o [README em inglês](README.md).
 
+## Cenas com IA (opcionais)
+
+Ative **IA** no painel e o Claude cria uma cena de luzes — paleta, padrão (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), velocidade e intensidade — para a janela que está a ver. A cena sobrepõe-se aos efeitos do fundo e das cores da janela e esbate-se ao mudar de janela.
+
+- **Desligadas por predefinição.** Requerem a sua própria chave de API da Anthropic: cole-a no painel (guardada cifrada para o seu utilizador do Windows com DPAPI em `config/ai.key`, excluído do git) ou defina a variável de ambiente `ANTHROPIC_API_KEY`.
+- **O que é enviado:** ao mudar de janela, uma pequena captura JPEG dessa janela (máx. 768 px de largura) segue para `api.anthropic.com`, no máximo uma vez por *Intervalo mínimo* (12 s por predefinição). Com a função desligada não é enviado nada. As janelas cujo título contenha palavras como "password" ou "bank" são ignoradas (`AiSkipTitles` em `config.json`).
+- **Custo:** os pedidos são faturados na sua própria conta Anthropic. O modelo predefinido é o pequeno e rápido `claude-haiku-4-5-20251001`; altere-o com `AiModel`.
+- **Ajustes:** *Intensidade da IA*, *Intervalo mínimo* e *Esbatimento de cena* na secção **IA**.
+
 ## Compatibilidade e aviso legal
 
 - Desenvolvido e testado no **Legion 7 16IRX9**. Outros Legion com o mesmo teclado Spectrum *deverão* funcionar, mas não foram testados: [abra uma issue](../../issues) com o resultado do `probe`.
@@ -93,7 +103,7 @@ Detalhes técnicos, referência da linha de comandos e tabela completa de config
 
 ## Segurança e confiança
 
-- Sem acesso à rede, sem telemetria, sem atualizações automáticas.
+- Sem telemetria nem atualizações automáticas. A única função de rede é a opcional, desligada por predefinição, das [cenas com IA](#cenas-com-ia-opcionais), que só comunica com `api.anthropic.com`.
 - As compilações oficiais são geradas apenas pelo [workflow de release](.github/workflows/release.yml) a partir de uma etiqueta e incluem um `SHA256SUMS.txt`. Binários de qualquer outra origem não são oficiais — consulte [SECURITY.md](SECURITY.md).
 - Os forks são bem-vindos ao abrigo da GPL; só o mantenedor pode alterar este repositório.
 

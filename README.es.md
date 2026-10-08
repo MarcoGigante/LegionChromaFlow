@@ -30,7 +30,8 @@ Iluminación RGB dinámica tecla a tecla con un panel de control al estilo Razer
 - 🌍 **7 idiomas** — inglés, italiano, español, francés, alemán, portugués y chino simplificado, seleccionables desde el panel.
 - 🔔 **Icono en la bandeja del sistema** — clic izquierdo para mostrar/ocultar el panel, clic derecho para el menú rápido.
 - 🔌 **Cero dependencias** — usa `hid.dll`, GDI+ y GDI. Solo necesitas .NET.
-- 🔒 **Sin conexión y privado** — no hay código de red. Los píxeles de las ventanas se leen en memoria y nunca se guardan.
+- 🤖 **Escenas con IA opcionales** — Claude puede diseñar una escena de luces (paleta, patrón, velocidad) para la ventana que estás mirando, además de los otros efectos. Desactivadas por defecto; requieren tu propia clave de API.
+- 🔒 **Sin conexión y privado por defecto** — nada sale de tu PC salvo que actives las escenas con IA. Los píxeles de las ventanas se leen en memoria y nunca se guardan.
 
 <div align="center">
 <img src="docs/screenshot-window.png" alt="Página de ajustes de color de la ventana" width="760">
@@ -84,6 +85,15 @@ Pasa el ratón por el icono redondo **ⓘ** junto a cada opción para ver qué h
 
 Detalles técnicos, referencia de línea de comandos y tabla completa de configuración: consulta el [README en inglés](README.md).
 
+## Escenas con IA (opcionales)
+
+Activa **IA** en el panel y Claude diseña una escena de luces —paleta, patrón (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), velocidad e intensidad— para la ventana que estás mirando. La escena se superpone a los efectos del fondo y de los colores de la ventana, y se funde al cambiar de ventana.
+
+- **Desactivadas por defecto.** Requieren tu propia clave de API de Anthropic: pégala en el panel (se guarda cifrada para tu usuario de Windows con DPAPI en `config/ai.key`, excluido de git) o define la variable de entorno `ANTHROPIC_API_KEY`.
+- **Qué se envía:** al cambiar de ventana, una pequeña captura JPEG de esa ventana (máx. 768 px de ancho) va a `api.anthropic.com`, como mucho una vez por *Intervalo mínimo* (12 s por defecto). Con la función desactivada no se envía nada. Las ventanas cuyo título contenga palabras como "password" o "bank" se omiten (`AiSkipTitles` en `config.json`).
+- **Coste:** las peticiones se facturan a tu propia cuenta de Anthropic. El modelo predeterminado es el pequeño y rápido `claude-haiku-4-5-20251001`; cámbialo con `AiModel`.
+- **Ajustes:** *Intensidad de la IA*, *Intervalo mínimo* y *Fundido de escena* en la sección **IA**.
+
 ## Compatibilidad y aviso legal
 
 - Desarrollado y probado en el **Legion 7 16IRX9**. Otros Legion con el mismo teclado Spectrum *deberían* funcionar, pero no se han probado: [abre una issue](../../issues) con la salida de `probe`.
@@ -93,7 +103,7 @@ Detalles técnicos, referencia de línea de comandos y tabla completa de configu
 
 ## Seguridad y confianza
 
-- Sin acceso a la red, sin telemetría, sin actualizaciones automáticas.
+- Sin telemetría ni actualizaciones automáticas. La única función de red es la opcional, desactivada por defecto, de las [escenas con IA](#escenas-con-ia-opcionales), que solo habla con `api.anthropic.com`.
 - Las compilaciones oficiales las genera únicamente el [workflow de release](.github/workflows/release.yml) a partir de una etiqueta e incluyen un `SHA256SUMS.txt`. Los binarios de cualquier otro origen no son oficiales — consulta [SECURITY.md](SECURITY.md).
 - Los forks son bienvenidos bajo la GPL; solo el mantenedor puede modificar este repositorio.
 

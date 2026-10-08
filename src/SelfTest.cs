@@ -104,6 +104,47 @@ internal static class SelfTest
         for (var k = 0; k < n; k++) if (rgbEnd[k * 3] + rgbEnd[k * 3 + 1] + rgbEnd[k * 3 + 2] == 0) zero++;
         Check(zero == 0, "at the end of the wave all keys are lit again");
 
+        // --- D3: AI scenes (parsing and rendering; no network involved) ---
+        Console.WriteLine("AI scenes:");
+        var reply = "Sure! ```json\n{\"palette\":[\"#101830\",\"#2060ff\",\"#ff40a0\"],\"pattern\":\"Fire\",\"speed\":0.8,\"intensity\":1.4,\"mood\":\"warm sunset\"}\n```";
+        AiSceneData? scene = null;
+        try { scene = AiDirector.Parse(reply); } catch { }
+        Check(scene is not null && scene.Palette.Length == 3 && scene.Pattern == "fire" && scene.Intensity == 1.0, "a fenced JSON reply is parsed and validated");
+        var bad = false;
+        try { AiDirector.Parse("{\"palette\":[\"nope\"],\"pattern\":\"x\"}"); } catch { bad = true; }
+        Check(bad, "a reply without valid colors is rejected");
+        if (scene is not null)
+        {
+            var aiCfg = new Config { RandomRippleEverySeconds = 0, AiEnabled = true, AiStrength = 1.0, AiFadeSeconds = 0.5 };
+            aiCfg.Clamp();
+            var plain = NewEngine(new Config { RandomRippleEverySeconds = 0 });
+            var withAi = NewEngine(aiCfg);
+            var rgbPlain = new byte[n * 3]; var rgbAi = new byte[n * 3];
+            withAi.SetAiScene(scene);
+            for (var t = 0; t <= 40; t++) { plain.Render(t * 0.1, rgbPlain, out _, out _, out _); withAi.Render(t * 0.1, rgbAi, out _, out _, out _); }
+            Check(!rgbPlain.SequenceEqual(rgbAi), "an AI scene changes the colors");
+            var offCfg = new Config { RandomRippleEverySeconds = 0, AiEnabled = false, AiStrength = 1.0 };
+            offCfg.Clamp();
+            var offEngine = NewEngine(offCfg);
+            var rgbOff = new byte[n * 3];
+            offEngine.SetAiScene(scene);
+            var plain2 = NewEngine(new Config { RandomRippleEverySeconds = 0 });
+            var rgbPlain2 = new byte[n * 3];
+            for (var t = 0; t <= 40; t++) { plain2.Render(t * 0.1, rgbPlain2, out _, out _, out _); offEngine.Render(t * 0.1, rgbOff, out _, out _, out _); }
+            Check(rgbOff.SequenceEqual(rgbPlain2), "with AI disabled the scene has no effect");
+            var allPatterns = true;
+            foreach (var pat in new[] { "aurora", "pulse", "wave", "sparkle", "rain", "fire", "breathe" })
+            {
+                var ps = scene with { Pattern = pat };
+                var pe = NewEngine(aiCfg);
+                pe.SetAiScene(ps);
+                var buf = new byte[n * 3];
+                for (var t = 0; t <= 20; t++) pe.Render(t * 0.1, buf, out _, out _, out _);
+                if (buf.All(v => v == 0)) allPatterns = false;
+            }
+            Check(allPatterns, "all seven patterns produce light");
+        }
+
         // --- E: tutti i valori restano validi e nessun tasto spento in modo anomalo ---
         Console.WriteLine("Output consistency:");
         var e = NewEngine(cfg);

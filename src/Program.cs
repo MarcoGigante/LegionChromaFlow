@@ -169,12 +169,12 @@ internal static class Program
             {
                 if (!announcedMissing)
                 {
-                    Log.Warn("Spectrum keyboard not found, retrying every 3 seconds (if never found, run as administrator).");
+                    Log.Warn("Spectrum keyboard not found, retrying every second (if never found, run as administrator).");
                     announcedMissing = true;
                 }
                 Live.SetStatus("waiting");
                 if (test) return 2;
-                stop.WaitOne(3000);
+                stop.WaitOne(1000);
                 continue;
             }
 
@@ -244,6 +244,7 @@ internal static class Program
         var wallSig = WallpaperSignature(cfg);
         var wall = LoadWallpaper(cfg) ?? Field.Rainbow();
         var engine = new FlowEngine(cfg, dev.KeyCodes, wall);
+        var ai = new AiController(cfg, engine);
 
         var allCodes = new List<ushort>(engine.KeyCodes);
         allCodes.AddRange(dev.ExtraKeyCodes);
@@ -274,7 +275,7 @@ internal static class Program
                 if (now >= nextWin)
                 {
                     nextWin = now + cfg.WindowSampleMs / 1000.0;
-                    SampleWindow(engine, cfg, now, ref lastHandle, ref lastKind, Live.ConsumeWave());
+                    SampleWindow(engine, ai, cfg, now, ref lastHandle, ref lastKind, Live.ConsumeWave());
                 }
 
                 if (now >= nextWall)
@@ -293,6 +294,7 @@ internal static class Program
                     }
                 }
 
+                ai.Tick(now);
                 engine.Render(now, rgb, out var er, out var eg, out var eb);
                 for (var i = 0; i < extraCount; i++)
                 {
@@ -318,7 +320,7 @@ internal static class Program
         }
     }
 
-    private static void SampleWindow(FlowEngine engine, Config cfg, double now, ref long lastHandle, ref Desktop.WindowKind lastKind, bool force)
+    private static void SampleWindow(FlowEngine engine, AiController ai, Config cfg, double now, ref long lastHandle, ref Desktop.WindowKind lastKind, bool force)
     {
         var info = Desktop.GetForeground();
 
@@ -332,7 +334,9 @@ internal static class Program
             return;
         }
 
-        var changed = force || info.Handle != lastHandle || info.Kind != lastKind;
+        var realChange = info.Handle != lastHandle || info.Kind != lastKind;
+        if (realChange) ai.OnWindowChanged(info.Kind, info.Handle, now);
+        var changed = force || realChange;
         Field? f = info.Kind == Desktop.WindowKind.Normal
             ? Desktop.CaptureWindow(info.Handle, cfg.ChromaThreshold, cfg.ValueThreshold)
             : null;

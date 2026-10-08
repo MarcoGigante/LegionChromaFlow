@@ -143,6 +143,55 @@ internal static class Desktop
         return new WindowInfo(WindowKind.Normal, h.ToInt64(), cls);
     }
 
+    /// <summary>Title of a window (empty if it has none).</summary>
+    public static string GetTitle(long handle)
+    {
+        var sb = new StringBuilder(512);
+        GetWindowTextW(new IntPtr(handle), sb, sb.Capacity);
+        return sb.ToString();
+    }
+
+    /// <summary>Captures a window as a JPEG downscaled to at most maxWidth pixels (used only for the optional AI scenes).</summary>
+    public static byte[]? CaptureJpeg(long handle, int maxWidth)
+    {
+        try
+        {
+            var hwnd = new IntPtr(handle);
+            if (!GetWindowRect(hwnd, out var r)) return null;
+            var vx = GetSystemMetrics(76); var vy = GetSystemMetrics(77);
+            var vw = GetSystemMetrics(78); var vh = GetSystemMetrics(79);
+            var left = Math.Max(r.Left, vx); var top = Math.Max(r.Top, vy);
+            var right = Math.Min(r.Right, vx + vw); var bottom = Math.Min(r.Bottom, vy + vh);
+            var w = right - left; var h = bottom - top;
+            if (w < 80 || h < 80) return null;
+
+            using var full = new System.Drawing.Bitmap(w, h);
+            using (var g = System.Drawing.Graphics.FromImage(full))
+                g.CopyFromScreen(left, top, 0, 0, new System.Drawing.Size(w, h));
+
+            var scale = Math.Min(1.0, maxWidth / (double)w);
+            var tw = Math.Max(1, (int)(w * scale)); var th = Math.Max(1, (int)(h * scale));
+            using var small = new System.Drawing.Bitmap(tw, th);
+            using (var g = System.Drawing.Graphics.FromImage(small))
+            {
+                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                g.DrawImage(full, 0, 0, tw, th);
+            }
+
+            var enc = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders().First(e => e.MimeType == "image/jpeg");
+            using var prm = new System.Drawing.Imaging.EncoderParameters(1);
+            prm.Param[0] = new System.Drawing.Imaging.EncoderParameter(System.Drawing.Imaging.Encoder.Quality, 70L);
+            using var ms = new MemoryStream();
+            small.Save(ms, enc, prm);
+            return ms.ToArray();
+        }
+        catch (Exception ex)
+        {
+            Log.Warn($"Window capture for AI failed: {ex.Message}");
+            return null;
+        }
+    }
+
     private static IntPtr _memDc, _bitmap, _oldBitmap;
     private const int CapW = 64, CapH = 36;
 
@@ -288,6 +337,7 @@ internal static class Desktop
 
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr hwnd, out RECT rect);
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetWindowTextW(IntPtr hwnd, StringBuilder sb, int max);
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr hwnd);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassNameW(IntPtr hwnd, StringBuilder sb, int max);
     [DllImport("user32.dll")] private static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint pid);

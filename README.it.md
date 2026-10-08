@@ -30,7 +30,8 @@ Illuminazione RGB dinamica per singolo tasto con un pannello di controllo in sti
 - 🌍 **7 lingue** — inglese, italiano, spagnolo, francese, tedesco, portoghese e cinese semplificato, selezionabili dal pannello.
 - 🔔 **Icona nell'area di notifica** — clic sinistro per mostrare/nascondere il pannello, clic destro per il menu rapido.
 - 🔌 **Zero dipendenze** — usa `hid.dll`, GDI+ e GDI. Serve solo .NET.
-- 🔒 **Offline e privato** — nessun codice di rete. I pixel delle finestre vengono letti in memoria e mai salvati.
+- 🤖 **Scene AI opzionali** — Claude può creare una scena di luci (palette, motivo, velocità) per la finestra che stai guardando, in aggiunta agli altri effetti. Disattivate di default; serve la tua chiave API.
+- 🔒 **Offline e privato per impostazione predefinita** — nulla esce dal PC se non attivi le scene AI. I pixel delle finestre vengono letti in memoria e mai salvati.
 
 <div align="center">
 <img src="docs/screenshot-window.png" alt="Pagina delle impostazioni dei colori della finestra" width="760">
@@ -84,6 +85,15 @@ Passa il mouse sull'icona tonda **ⓘ** accanto a ogni opzione per vedere cosa f
 
 Dettagli tecnici, riferimento della riga di comando e tabella completa della configurazione: vedi il [README in inglese](README.md).
 
+## Scene AI (opzionali)
+
+Attiva **AI** nel pannello e Claude crea una scena di luci — palette, motivo (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), velocità e intensità — per la finestra che stai guardando. La scena si sovrappone agli effetti dello sfondo e dei colori della finestra e sfuma quando cambi finestra.
+
+- **Disattivate di default.** Serve la tua chiave API Anthropic: incollala nel pannello (salvata cifrata per il tuo utente Windows con DPAPI in `config/ai.key`, escluso da git) oppure imposta la variabile d'ambiente `ANTHROPIC_API_KEY`.
+- **Cosa viene inviato:** quando cambi finestra, un'unica piccola immagine JPEG di quella finestra (max 768 px di larghezza) va a `api.anthropic.com`, al massimo una volta per *Intervallo minimo* (12 s di default). Se la funzione è spenta non viene inviato nulla. Le finestre il cui titolo contiene parole come "password" o "bank" vengono saltate (`AiSkipTitles` in `config.json`).
+- **Costo:** le richieste sono addebitate al tuo account Anthropic. Il modello predefinito è il piccolo e veloce `claude-haiku-4-5-20251001`; cambialo con `AiModel`.
+- **Regolazioni:** *Intensità AI*, *Intervallo minimo* e *Dissolvenza scena* nella sezione **AI**.
+
 ## Compatibilità e avvertenze
 
 - Sviluppato e provato sul **Legion 7 16IRX9**. Altri Legion con la stessa tastiera Spectrum *dovrebbero* funzionare ma non sono stati provati: [apri una issue](../../issues) con l'output di `probe`.
@@ -93,7 +103,7 @@ Dettagli tecnici, riferimento della riga di comando e tabella completa della con
 
 ## Sicurezza e fiducia
 
-- Nessun accesso alla rete, nessuna telemetria, nessun aggiornamento automatico.
+- Nessuna telemetria, nessun aggiornamento automatico. L'unica funzione di rete è quella opzionale, disattivata di default, delle [scene AI](#scene-ai-opzionali), che parla solo con `api.anthropic.com`.
 - Le build ufficiali sono prodotte solo dal [workflow di release](.github/workflows/release.yml) a partire da un tag e includono un `SHA256SUMS.txt`. Binari da altre fonti non sono ufficiali — vedi [SECURITY.md](SECURITY.md).
 - I fork sono benvenuti con licenza GPL; solo il maintainer può modificare questo repository.
 

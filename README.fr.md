@@ -30,7 +30,8 @@
 - 🌍 **7 langues** — anglais, italien, espagnol, français, allemand, portugais et chinois simplifié, au choix dans le panneau.
 - 🔔 **Icône dans la zone de notification** — clic gauche pour afficher/masquer le panneau, clic droit pour le menu rapide.
 - 🔌 **Zéro dépendance** — utilise `hid.dll`, GDI+ et GDI. Seul .NET est nécessaire.
-- 🔒 **Hors ligne et privé** — aucun code réseau. Les pixels des fenêtres sont lus en mémoire et jamais enregistrés.
+- 🤖 **Scènes IA optionnelles** — Claude peut concevoir une scène lumineuse (palette, motif, vitesse) pour la fenêtre que vous regardez, en plus des autres effets. Désactivées par défaut ; votre propre clé API est nécessaire.
+- 🔒 **Hors ligne et privé par défaut** — rien ne quitte votre PC sauf si vous activez les scènes IA. Les pixels des fenêtres sont lus en mémoire et jamais enregistrés.
 
 <div align="center">
 <img src="docs/screenshot-window.png" alt="Page des réglages de couleur de la fenêtre" width="760">
@@ -84,6 +85,15 @@ Survolez l'icône ronde **ⓘ** à côté de chaque option pour voir ce qu'elle 
 
 Détails techniques, référence de la ligne de commande et tableau complet de configuration : voir le [README en anglais](README.md).
 
+## Scènes IA (optionnelles)
+
+Activez **IA** dans le panneau et Claude conçoit une scène lumineuse — palette, motif (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), vitesse et intensité — pour la fenêtre que vous regardez. La scène se superpose aux effets du fond d'écran et des couleurs de la fenêtre, et se fond quand vous changez de fenêtre.
+
+- **Désactivées par défaut.** Votre propre clé API Anthropic est nécessaire : collez-la dans le panneau (enregistrée chiffrée pour votre utilisateur Windows avec DPAPI dans `config/ai.key`, exclu de git) ou définissez la variable d'environnement `ANTHROPIC_API_KEY`.
+- **Ce qui est envoyé :** à chaque changement de fenêtre, une petite capture JPEG de cette fenêtre (768 px de large au maximum) part vers `api.anthropic.com`, au plus une fois par *Intervalle minimal* (12 s par défaut). Rien n'est envoyé lorsque la fonction est désactivée. Les fenêtres dont le titre contient des mots comme « password » ou « bank » sont ignorées (`AiSkipTitles` dans `config.json`).
+- **Coût :** les requêtes sont facturées sur votre propre compte Anthropic. Le modèle par défaut est le petit et rapide `claude-haiku-4-5-20251001` ; changez-le avec `AiModel`.
+- **Réglages :** *Intensité de l'IA*, *Intervalle minimal* et *Fondu de scène* dans la section **IA**.
+
 ## Compatibilité et avertissement
 
 - Développé et testé sur le **Legion 7 16IRX9**. Les autres Legion avec le même clavier Spectrum *devraient* fonctionner mais ne sont pas testés : [ouvrez une issue](../../issues) avec la sortie de `probe`.
@@ -93,7 +103,7 @@ Détails techniques, référence de la ligne de commande et tableau complet de c
 
 ## Sécurité et confiance
 
-- Aucun accès réseau, aucune télémétrie, aucune mise à jour automatique.
+- Aucune télémétrie, aucune mise à jour automatique. La seule fonction réseau est celle, optionnelle et désactivée par défaut, des [scènes IA](#scènes-ia-optionnelles), qui ne parle qu'à `api.anthropic.com`.
 - Les builds officiels sont produits uniquement par le [workflow de release](.github/workflows/release.yml) à partir d'un tag et fournis avec un `SHA256SUMS.txt`. Les binaires d'une autre provenance ne sont pas officiels — voir [SECURITY.md](SECURITY.md).
 - Les forks sont les bienvenus sous GPL ; seul le mainteneur peut modifier ce dépôt.
 

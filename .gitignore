@@ -1,6 +1,7 @@
 bin/
 obj/
 logs/
+config/ai.key
 *.log
 *.user
 .vs/

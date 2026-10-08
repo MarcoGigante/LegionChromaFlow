@@ -30,7 +30,8 @@ Dynamische RGB-Beleuchtung pro Taste mit einem Bedienfeld im Stil von Razer Chro
 - 🌍 **7 Sprachen** — Englisch, Italienisch, Spanisch, Französisch, Deutsch, Portugiesisch und vereinfachtes Chinesisch, im Bedienfeld wählbar.
 - 🔔 **Symbol im Infobereich** — Linksklick blendet das Bedienfeld ein/aus, Rechtsklick öffnet das Schnellmenü.
 - 🔌 **Keine Abhängigkeiten** — nutzt `hid.dll`, GDI+ und GDI. Nur .NET wird benötigt.
-- 🔒 **Offline und privat** — kein Netzwerkcode. Fensterpixel werden im Speicher gelesen und nie gespeichert.
+- 🤖 **Optionale KI-Szenen** — Claude kann für das Fenster, das Sie gerade ansehen, eine Lichtszene (Palette, Muster, Tempo) entwerfen, zusätzlich zu den anderen Effekten. Standardmäßig aus; benötigt Ihren eigenen API-Schlüssel.
+- 🔒 **Standardmäßig offline und privat** — nichts verlässt Ihren PC, solange Sie KI-Szenen nicht einschalten. Fensterpixel werden im Speicher gelesen und nie gespeichert.
 
 <div align="center">
 <img src="docs/screenshot-window.png" alt="Einstellungsseite für die Fensterfarben" width="760">
@@ -84,6 +85,15 @@ Fahren Sie mit der Maus über das runde **ⓘ** neben einer Option, um zu sehen,
 
 Technische Details, Kommandozeilen-Referenz und die vollständige Konfigurationstabelle: siehe die [englische README](README.md).
 
+## KI-Szenen (optional)
+
+Aktivieren Sie **KI** im Bedienfeld, und Claude entwirft eine Lichtszene — Palette, Muster (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), Tempo und Intensität — für das Fenster, das Sie gerade ansehen. Die Szene legt sich über die Effekte von Hintergrund und Fensterfarben und blendet beim Fensterwechsel über.
+
+- **Standardmäßig aus.** Sie benötigen Ihren eigenen Anthropic-API-Schlüssel: im Bedienfeld einfügen (verschlüsselt für Ihren Windows-Benutzer per DPAPI in `config/ai.key` gespeichert, von git ausgeschlossen) oder die Umgebungsvariable `ANTHROPIC_API_KEY` setzen.
+- **Was gesendet wird:** Beim Fensterwechsel geht ein kleiner JPEG-Screenshot dieses Fensters (max. 768 px breit) an `api.anthropic.com`, höchstens einmal pro *Mindestintervall* (standardmäßig 12 s). Ist die Funktion aus, wird nichts gesendet. Fenster, deren Titel Wörter wie „password“ oder „bank“ enthält, werden übersprungen (`AiSkipTitles` in `config.json`).
+- **Kosten:** Anfragen werden Ihrem eigenen Anthropic-Konto berechnet. Standardmodell ist das kleine, schnelle `claude-haiku-4-5-20251001`; änderbar über `AiModel`.
+- **Einstellungen:** *KI-Stärke*, *Mindestintervall* und *Szenenüberblendung* im Bereich **KI**.
+
 ## Kompatibilität und Haftungsausschluss
 
 - Entwickelt und getestet auf dem **Legion 7 16IRX9**. Andere Legion-Modelle mit derselben Spectrum-Tastatur *sollten* funktionieren, sind aber ungetestet — bitte [öffnen Sie ein Issue](../../issues) mit der Ausgabe von `probe`.
@@ -93,7 +103,7 @@ Technische Details, Kommandozeilen-Referenz und die vollständige Konfigurations
 
 ## Sicherheit und Vertrauen
 
-- Kein Netzwerkzugriff, keine Telemetrie, keine automatischen Updates.
+- Keine Telemetrie, keine automatischen Updates. Die einzige Netzwerkfunktion sind die optionalen, standardmäßig abgeschalteten [KI-Szenen](#ki-szenen-optional), die nur mit `api.anthropic.com` kommunizieren.
 - Offizielle Builds entstehen ausschließlich im [Release-Workflow](.github/workflows/release.yml) aus einem Tag und enthalten eine `SHA256SUMS.txt`. Binärdateien aus anderen Quellen sind nicht offiziell — siehe [SECURITY.md](SECURITY.md).
 - Forks sind unter der GPL willkommen; nur der Maintainer kann dieses Repository ändern.
 

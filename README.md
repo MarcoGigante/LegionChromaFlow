@@ -34,7 +34,8 @@ Dynamic per-key RGB lighting with a Razer-Chroma-style control panel — no Leno
 - 🔔 **System-tray app** — left-click to show/hide the panel, right-click for quick style switch, wave preview and *Exit*.
 - 🔌 **Zero dependencies** — talks to the keyboard through `hid.dll`, reads the wallpaper with GDI+, captures windows with GDI. Nothing to install except .NET.
 - 🔁 **Self-healing** — reconnects automatically after sleep/resume or when the keyboard re-enumerates.
-- 🔒 **Offline and private** — no network code at all. Window pixels are sampled in memory and never stored.
+- 🤖 **Optional AI scenes** — Claude can design a lighting scene (palette, pattern, speed) for the window you are looking at, layered on top of the other effects. Off by default; needs your own API key.
+- 🔒 **Offline and private by default** — nothing leaves your PC unless you turn on AI scenes. Window pixels are sampled in memory and never stored.
 
 <div align="center">
 <img src="docs/screenshot-window.png" alt="Window-color settings page" width="760">
@@ -89,6 +90,7 @@ Edit `config/config.json` (it is commented) or use the panel. The most useful ke
 |---|---|
 | `Language` | `"auto"` (Windows display language), `"en"`, `"it"`, `"es"`, `"fr"`, `"de"`, `"pt"` or `"zh"` |
 | `WaveStyle` | `"smooth"` or `"barrier"` |
+| `AiEnabled`, `AiStrength`, `AiMinSeconds`, `AiModel`, `AiSkipTitles` | Optional [AI scenes](#ai-scenes-optional) (off by default) |
 | `WindowInfluence` | `0` ignore the window · `0.28` subtle tint · `1` full takeover |
 | `WindowFollowSeconds` | How smoothly lights chase window colors. `0` instant (can look steppy) · `1.2` default · `3+` very smooth, slower to react |
 | `WaveSeconds` | Seconds for the wave to travel from the center to the edges |
@@ -129,6 +131,15 @@ dotnet bin\LegionChromaFlow.dll <mode>
 
 The project is plain C# / .NET 8 (WinForms for the panel), with no NuGet packages. Source lives in [`src/`](src); `selftest` verifies the effect logic without hardware.
 
+## AI scenes (optional)
+
+Turn on **AI** in the panel and Claude designs a lighting scene — palette, pattern (`aurora`, `pulse`, `wave`, `sparkle`, `rain`, `fire`, `breathe`), speed and intensity — for whatever window you are looking at. The scene is layered **on top of** the wallpaper and window-color effects, and cross-fades when you switch window.
+
+- **Off by default.** It needs your own Anthropic API key: paste it in the panel (stored encrypted for your Windows user with DPAPI in `config/ai.key`, which is git-ignored) or set the `ANTHROPIC_API_KEY` environment variable.
+- **What is sent:** when you switch window, one small JPEG screenshot of that window (max 768 px wide) goes to `api.anthropic.com` — at most once per *Minimum interval* (12 s by default). Nothing is sent while the feature is off. Windows whose title contains words like “password” or “bank” are skipped (`AiSkipTitles` in `config.json`).
+- **Cost:** requests are billed to your own Anthropic account. The default model is the small, fast `claude-haiku-4-5-20251001`; change it with `AiModel`.
+- **Tuning:** *AI strength* (how much it covers the normal effect), *Minimum interval* and *Scene fade* in the **AI** section.
+
 ## Compatibility and disclaimer
 
 - Developed and tested on the **Legion 7 16IRX9**. Other Legion models using the same Spectrum keyboard *should* work but are untested — please [open an issue](../../issues) with your `probe` output.
@@ -138,7 +149,7 @@ The project is plain C# / .NET 8 (WinForms for the panel), with no NuGet package
 
 ## Security and trust
 
-- No network access, no telemetry, no auto-update.
+- No telemetry, no auto-update. The only network feature is the optional, off-by-default [AI scenes](#ai-scenes-optional), which talks to `api.anthropic.com` only.
 - Official builds are produced only by the [release workflow](.github/workflows/release.yml) from a tagged commit and ship with a `SHA256SUMS.txt`. Binaries from anywhere else are not official — see [SECURITY.md](SECURITY.md).
 - Forks are welcome under the GPL; only the maintainer can change this repository.
 

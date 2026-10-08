@@ -8,6 +8,23 @@ internal static class Live
 
     public static void SetStatus(string key, params object[] args) { _statusArgs = args; _statusKey = key; }
     public static string StatusText => L.T("status." + _statusKey, _statusArgs);
+    // ---- AI scene status (shown in the panel) ----
+    private static string _aiKey = "off";
+    private static AiSceneData? _aiScene;
+    private static string _aiError = "";
+
+    public static void SetAi(string key, AiSceneData? scene = null, string error = "")
+    {
+        if (key == "ok") _aiScene = scene;
+        if (key == "off" || key == "nokey") _aiScene = null;
+        _aiError = error;
+        _aiKey = key;
+    }
+
+    public static string AiKey => _aiKey;
+    public static AiSceneData? AiScene => _aiScene;
+    public static string AiError => _aiError;
+
     public static bool StatusOk => _statusKey is "connected" or "active";
 
     private static int _wave;

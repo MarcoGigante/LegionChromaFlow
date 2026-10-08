@@ -55,6 +55,24 @@ internal sealed class Config
     /// <summary>Interface language: "auto" (Windows display language), "en", "it", "es", "fr", "de", "pt" or "zh".</summary>
     public string Language { get; set; } = "auto";
 
+    /// <summary>Enables AI scenes: a downscaled screenshot of the active window is sent to the Anthropic API (opt-in, needs your own API key).</summary>
+    public bool AiEnabled { get; set; } = false;
+
+    /// <summary>How strongly the AI scene covers the normal effect (0 = not at all, 1 = fully).</summary>
+    public double AiStrength { get; set; } = 0.75;
+
+    /// <summary>Minimum seconds between two AI requests (limits cost and traffic).</summary>
+    public double AiMinSeconds { get; set; } = 12;
+
+    /// <summary>Seconds to cross-fade between AI scenes.</summary>
+    public double AiFadeSeconds { get; set; } = 2.0;
+
+    /// <summary>Anthropic model used for scenes.</summary>
+    public string AiModel { get; set; } = "claude-haiku-4-5-20251001";
+
+    /// <summary>Comma-separated words: windows whose title contains one of them are never sent to the AI.</summary>
+    public string AiSkipTitles { get; set; } = "password,bitwarden,1password,keepass,lastpass,bank,incognito,private browsing,inprivate";
+
     /// <summary>Wave style: "smooth" (soft dissolve with glow) or "barrier" (crisp front with a band of switched-off keys).</summary>
     public string WaveStyle { get; set; } = "smooth";
 
@@ -134,11 +152,23 @@ internal sealed class Config
             foreach (var (key, val) in values)
             {
                 var rx = new System.Text.RegularExpressions.Regex("(\"" + key + "\"" + @"\s*:\s*)(""[^""]*""|[^,\r\n/]+)");
-                text = rx.IsMatch(text) ? rx.Replace(text, m => m.Groups[1].Value + val, 1) : text;
+                if (rx.IsMatch(text)) text = rx.Replace(text, m => m.Groups[1].Value + val, 1);
+                else text = InsertKey(text, key, val);
             }
             File.WriteAllText(path, text);
         }
         catch (Exception ex) { Log.Warn($"Saving the configuration failed: {ex.Message}"); }
+    }
+
+    /// <summary>Appends a missing key at the end of the JSON object (keeps comments of older config files intact).</summary>
+    private static string InsertKey(string text, string key, string val)
+    {
+        var end = text.LastIndexOf('}');
+        if (end < 0) return text;
+        var i = end - 1;
+        while (i >= 0 && char.IsWhiteSpace(text[i])) i--;
+        var comma = i >= 0 && text[i] != ',' && text[i] != '{' ? "," : "";
+        return text[..(i + 1)] + comma + Environment.NewLine + "  \"" + key + "\": " + val + Environment.NewLine + text[end..];
     }
 
     public void Clamp()
@@ -151,6 +181,11 @@ internal sealed class Config
         WaveSeconds = Math.Clamp(WaveSeconds, 0.3, 10.0);
         WaveBand = Math.Clamp(WaveBand, 0.1, 1.0);
         WaveGlow = Math.Clamp(WaveGlow, 0.0, 1.0);
+        AiStrength = Math.Clamp(AiStrength, 0.0, 1.0);
+        AiMinSeconds = Math.Clamp(AiMinSeconds, 3.0, 600.0);
+        AiFadeSeconds = Math.Clamp(AiFadeSeconds, 0.2, 10.0);
+        if (string.IsNullOrWhiteSpace(AiModel)) AiModel = "claude-haiku-4-5-20251001";
+        AiSkipTitles ??= "";
         Language = (Language ?? "auto").Trim().ToLowerInvariant();
         WindowFollowSeconds = Math.Clamp(WindowFollowSeconds, 0.0, 10.0);
         WaveStyle = string.Equals(WaveStyle?.Trim(), "barrier", StringComparison.OrdinalIgnoreCase) ? "barrier" : "smooth";

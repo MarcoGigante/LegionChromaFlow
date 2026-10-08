@@ -413,6 +413,254 @@ internal sealed class LangButton : Control
     }
 }
 
+/// <summary>On/off row with a pill switch.</summary>
+internal sealed class SwitchRow : Control
+{
+    private readonly Font _cap = Theme.Font(10.5f, FontStyle.Bold);
+    private readonly InfoIcon _info = new();
+    private readonly ToolTip _tip;
+    private readonly string _capKey, _helpKey;
+    public bool On { get; private set; }
+    public event Action<bool>? Toggled;
+
+    public SwitchRow(string capKey, string helpKey, bool on, ToolTip tip)
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+        _capKey = capKey; _helpKey = helpKey; _tip = tip; On = on;
+        BackColor = Theme.Bg; Cursor = Cursors.Hand; Height = 64;
+        Controls.Add(_info);
+        Relang();
+    }
+
+    public void Relang()
+    {
+        _tip.SetToolTip(_info, L.T(_helpKey));
+        if (IsHandleCreated) PlaceInfo();
+        Invalidate();
+    }
+
+    protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Height = (int)(64 * Theme.K(this)); PlaceInfo(); }
+
+    private void PlaceInfo()
+    {
+        var k = Theme.K(this);
+        _info.Left = (int)(18 * k) + TextRenderer.MeasureText(L.T(_capKey), _cap, new Size(int.MaxValue, 0), TextFormatFlags.NoPadding).Width + (int)(8 * k);
+        _info.Top = (Height - _info.Height) / 2;
+    }
+
+    protected override void OnResize(EventArgs e) { base.OnResize(e); if (IsHandleCreated) PlaceInfo(); }
+
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left && !_info.Bounds.Contains(e.Location))
+        {
+            On = !On; Invalidate(); Toggled?.Invoke(On);
+        }
+        base.OnMouseUp(e);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        Theme.Smooth(g);
+        g.Clear(Theme.Bg);
+        var k = Theme.K(this);
+        using (var card = Theme.Round(new RectangleF(0.5f, 0.5f, Width - 2, Height - 2), 10 * k))
+        {
+            using var b = new SolidBrush(Theme.Panel); g.FillPath(b, card);
+            using var p = new Pen(On ? Theme.Accent : Theme.Line); g.DrawPath(p, card);
+        }
+        var cap = L.T(_capKey);
+        var th = TextRenderer.MeasureText(cap, _cap, new Size(int.MaxValue, 0), TextFormatFlags.NoPadding).Height;
+        TextRenderer.DrawText(g, cap, _cap, new Point((int)(18 * k), (Height - th) / 2), Theme.Text, TextFormatFlags.NoPadding);
+
+        var sw = 46 * k; var sh = 24 * k;
+        var r = new RectangleF(Width - 18 * k - sw, (Height - sh) / 2, sw, sh);
+        using (var pill = Theme.Round(r, sh / 2))
+        {
+            if (On)
+            {
+                using var lg = new LinearGradientBrush(r, Theme.Accent, Theme.Cyan, 0f); g.FillPath(lg, pill);
+            }
+            else { using var off = new SolidBrush(Theme.Line); g.FillPath(off, pill); }
+        }
+        var d = sh - 6 * k;
+        var x = On ? r.Right - d - 3 * k : r.Left + 3 * k;
+        using (var knob = new SolidBrush(Theme.Text)) g.FillEllipse(knob, x, r.Top + 3 * k, d, d);
+    }
+}
+
+/// <summary>Highlighted note (privacy notice).</summary>
+internal sealed class NoteCard : Control
+{
+    private readonly Font _f = Theme.Font(9.5f);
+    private readonly string _key;
+
+    public NoteCard(string key)
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+        _key = key; BackColor = Theme.Bg; Height = 80;
+    }
+
+    public void Relang() { Fit(); Invalidate(); }
+
+    public void Fit()
+    {
+        if (Width < 80) return;
+        var k = Theme.K(this);
+        var s = TextRenderer.MeasureText(L.T(_key), _f, new Size(Width - (int)(44 * k), 0), TextFormatFlags.WordBreak);
+        var h = s.Height + (int)(28 * k);
+        if (Math.Abs(h - Height) > 1) Height = h;
+    }
+
+    protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Fit(); }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        Theme.Smooth(g);
+        g.Clear(Theme.Bg);
+        var k = Theme.K(this);
+        using (var card = Theme.Round(new RectangleF(0.5f, 0.5f, Width - 2, Height - 2), 10 * k))
+        {
+            using var b = new SolidBrush(Color.FromArgb(32, 18, 29)); g.FillPath(b, card);
+            using var p = new Pen(Color.FromArgb(120, Theme.Magenta)); g.DrawPath(p, card);
+        }
+        using (var bar = new SolidBrush(Theme.Magenta)) g.FillRectangle(bar, 0, 10 * k, 4 * k, Height - 20 * k);
+        TextRenderer.DrawText(g, L.T(_key), _f, new Rectangle((int)(22 * k), (int)(14 * k), Width - (int)(44 * k), Height - (int)(20 * k)), Theme.Text, TextFormatFlags.WordBreak);
+    }
+}
+
+/// <summary>API key entry: masked box, save/remove buttons and the current key state.</summary>
+internal sealed class KeyCard : Control
+{
+    private readonly Font _cap = Theme.Font(10.5f, FontStyle.Bold);
+    private readonly Font _sub = Theme.Font(9f);
+    private readonly InfoIcon _info = new();
+    private readonly TextBox _box = new()
+    {
+        UseSystemPasswordChar = true, BorderStyle = BorderStyle.FixedSingle, BackColor = Color.FromArgb(30, 30, 34),
+        ForeColor = Theme.Text, Font = Theme.Font(10f), PlaceholderText = "sk-ant-..."
+    };
+    private readonly Button _save = new(), _clear = new();
+    private readonly ToolTip _tip;
+
+    public KeyCard(ToolTip tip)
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+        _tip = tip; BackColor = Theme.Bg; Height = 130;
+        foreach (var b in new[] { _save, _clear })
+        {
+            b.FlatStyle = FlatStyle.Flat; b.FlatAppearance.BorderSize = 0; b.Cursor = Cursors.Hand; b.Font = Theme.Font(9.5f, FontStyle.Bold);
+        }
+        _save.BackColor = Theme.Accent; _save.ForeColor = Theme.Bg;
+        _clear.BackColor = Theme.Line; _clear.ForeColor = Theme.Text;
+        _save.Click += (_, _) =>
+        {
+            var key = _box.Text.Trim();
+            if (key.Length < 10) return;
+            if (AiKeyStore.Save(key)) _box.Clear();
+            Invalidate();
+        };
+        _clear.Click += (_, _) => { AiKeyStore.Clear(); _box.Clear(); Invalidate(); };
+        Controls.AddRange(new Control[] { _info, _box, _save, _clear });
+        Relang();
+    }
+
+    public void Relang()
+    {
+        _save.Text = L.T("ai.key.save"); _clear.Text = L.T("ai.key.clear");
+        _tip.SetToolTip(_info, L.T("ai.key.help"));
+        DoLayout(); Invalidate();
+    }
+
+    protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Height = (int)(130 * Theme.K(this)); DoLayout(); }
+    protected override void OnResize(EventArgs e) { base.OnResize(e); if (IsHandleCreated) DoLayout(); }
+
+    private void DoLayout()
+    {
+        var k = Theme.K(this);
+        _info.Left = (int)(18 * k) + TextRenderer.MeasureText(L.T("ai.key.cap"), _cap, new Size(int.MaxValue, 0), TextFormatFlags.NoPadding).Width + (int)(8 * k);
+        _info.Top = (int)(9 * k);
+        int Bw(Button b) => Math.Max((int)(120 * k), TextRenderer.MeasureText(b.Text, b.Font, new Size(int.MaxValue, 0), TextFormatFlags.NoPadding).Width + (int)(36 * k));
+        var bh = (int)(32 * k); var by = (int)(46 * k);
+        var wClear = Bw(_clear); var wSave = Bw(_save);
+        _clear.SetBounds(Width - (int)(18 * k) - wClear, by, wClear, bh);
+        _save.SetBounds(_clear.Left - (int)(8 * k) - wSave, by, wSave, bh);
+        var bx = (int)(18 * k);
+        _box.SetBounds(bx, by + (bh - _box.Height) / 2, Math.Max(60, _save.Left - (int)(12 * k) - bx), _box.Height);
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        Theme.Smooth(g);
+        g.Clear(Theme.Bg);
+        var k = Theme.K(this);
+        using (var card = Theme.Round(new RectangleF(0.5f, 0.5f, Width - 2, Height - 2), 10 * k))
+        {
+            using var b = new SolidBrush(Theme.Panel); g.FillPath(b, card);
+            using var p = new Pen(Theme.Line); g.DrawPath(p, card);
+        }
+        TextRenderer.DrawText(g, L.T("ai.key.cap"), _cap, new Point((int)(18 * k), (int)(10 * k)), Theme.Text, TextFormatFlags.NoPadding);
+        string text; Color col;
+        if (AiKeyStore.HasSavedKey) { text = L.T("ai.key.saved"); col = Theme.Accent; }
+        else if (AiKeyStore.HasEnvKey) { text = L.T("ai.key.env"); col = Theme.Accent; }
+        else { text = L.T("ai.key.none"); col = Theme.Dim; }
+        TextRenderer.DrawText(g, text, _sub, new Point((int)(18 * k), Height - (int)(34 * k)), col, TextFormatFlags.NoPadding);
+    }
+}
+
+/// <summary>Shows the state of the AI scenes and the last scene received (palette swatches).</summary>
+internal sealed class AiStatusCard : Control
+{
+    private readonly Font _small = Theme.Font(8.5f, FontStyle.Bold);
+    private readonly Font _text = Theme.Font(10.5f);
+
+    public AiStatusCard()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
+        BackColor = Theme.Bg; Height = 100;
+    }
+
+    protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); Height = (int)(100 * Theme.K(this)); }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        var g = e.Graphics;
+        Theme.Smooth(g);
+        g.Clear(Theme.Bg);
+        var k = Theme.K(this);
+        using (var card = Theme.Round(new RectangleF(0.5f, 0.5f, Width - 2, Height - 2), 10 * k))
+        {
+            using var b = new SolidBrush(Theme.Panel); g.FillPath(b, card);
+            using var p = new Pen(Theme.Line); g.DrawPath(p, card);
+        }
+        TextRenderer.DrawText(g, L.T("ai.last"), _small, new Point((int)(18 * k), (int)(12 * k)), Theme.Dim, TextFormatFlags.NoPadding);
+
+        var key = Live.AiKey;
+        string status;
+        if (key == "ok" && Live.AiScene is { } sc) status = L.T("ai.st.ok", sc.Pattern, string.IsNullOrEmpty(sc.Mood) ? "-" : sc.Mood);
+        else if (key == "error") status = L.T("ai.st.error", Live.AiError);
+        else status = L.T("ai.st." + key);
+        var col = key == "error" ? Theme.Magenta : key == "requesting" ? Theme.Cyan : Theme.Text;
+        TextRenderer.DrawText(g, status, _text, new Rectangle((int)(18 * k), (int)(34 * k), Width - (int)(36 * k), (int)(24 * k)), col,
+            TextFormatFlags.NoPadding | TextFormatFlags.EndEllipsis);
+
+        if (Live.AiScene is { } scene && key != "off" && key != "nokey")
+        {
+            var x = 18 * k;
+            foreach (var c in scene.Palette)
+            {
+                using var br = new SolidBrush(Color.FromArgb((int)(c[0] * 255), (int)(c[1] * 255), (int)(c[2] * 255)));
+                using var sw = Theme.Round(new RectangleF(x, Height - 32 * k, 44 * k, 16 * k), 5 * k);
+                g.FillPath(br, sw);
+                x += 52 * k;
+            }
+        }
+    }
+}
+
 internal sealed class MainForm : Form
 {
     [DllImport("user32.dll")] private static extern bool ShowWindow(IntPtr hwnd, int cmd);
@@ -421,7 +669,7 @@ internal sealed class MainForm : Form
     private sealed record Opt(string Page, string Key, double Min, double Max, Func<Config, double> Get, Action<Config, double> Set,
         Func<double, string> Fmt, string AppliesTo = "");
 
-    private static readonly string[] PageIds = { "live", "wave", "window", "look", "desk" };
+    private static readonly string[] PageIds = { "live", "wave", "window", "look", "desk", "ai" };
 
     private readonly Config _cfg;
     private readonly AppPaths _paths;
@@ -433,7 +681,8 @@ internal sealed class MainForm : Form
     private readonly List<(Opt opt, OptionRow row)> _rows = new();
     private readonly List<StyleCard> _cards = new();
     private readonly List<(string id, NavButton nav, Control page)> _pages = new();
-    private readonly List<(DbFlow flow, List<OptionRow> rows)> _flows = new();
+    private readonly List<(DbFlow flow, List<Control> rows)> _flows = new();
+    private AiStatusCard? _aiCard;
     private readonly List<Action> _relang = new();
     private readonly ToolStripMenuItem _miOpen = new(), _miStyle = new(), _miSmooth = new(), _miBarrier = new(), _miWave = new(), _miExit = new(), _miAuto = new();
     private readonly Font _small = Theme.Font(9.5f);
@@ -470,6 +719,10 @@ internal sealed class MainForm : Form
         new Opt("desk", "RandomRippleEverySeconds", 0, 60, c => c.RandomRippleEverySeconds, (c, v) => c.RandomRippleEverySeconds = v,
             v => v < 1 ? L.T("f.never") : L.T("f.every", v.ToString("0"))),
         new Opt("desk", "Fps", 5, 40, c => c.Fps, (c, v) => c.Fps = (int)v, v => $"{v:0} fps"),
+
+        new Opt("ai", "AiStrength", 0, 1, c => c.AiStrength, (c, v) => c.AiStrength = v, v => $"{v * 100:0}%"),
+        new Opt("ai", "AiMinSeconds", 3, 120, c => c.AiMinSeconds, (c, v) => c.AiMinSeconds = v, v => $"{v:0} s"),
+        new Opt("ai", "AiFadeSeconds", 0.2, 8, c => c.AiFadeSeconds, (c, v) => c.AiFadeSeconds = v, v => $"{v:0.0} s"),
     };
 
     public MainForm(Config cfg, AppPaths paths, bool startHidden)
@@ -532,6 +785,7 @@ internal sealed class MainForm : Form
         {
             if (!Visible) return;
             _big?.Invalidate(); _mini?.Invalidate();
+            if (_aiCard is not null && _aiCard.Visible) _aiCard.Invalidate();
             if (_status.Text != Live.StatusText) _status.Text = Live.StatusText;
             var c = Live.StatusOk ? Theme.Accent : Theme.Magenta;
             if (_dot.BackColor != c) _dot.BackColor = c;
@@ -780,7 +1034,8 @@ internal sealed class MainForm : Form
 
         var flow = new DbFlow { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
         flow.MouseEnter += (_, _) => flow.Focus();
-        var rows = new List<OptionRow>();
+        var rows = new List<Control>();
+        if (id == "ai") AddAiControls(flow, rows);
         foreach (var o in Options().Where(x => x.Page == id))
         {
             var row = new OptionRow(o.Key, o.Min, o.Max, o.Get(_cfg), o.Fmt, _tip) { Margin = new Padding(0, 0, 0, 10) };
@@ -797,6 +1052,22 @@ internal sealed class MainForm : Form
         return t;
     }
 
+    private void AddAiControls(DbFlow flow, List<Control> rows)
+    {
+        var note = new NoteCard("ai.privacy") { Margin = new Padding(0, 0, 0, 10) };
+        var sw = new SwitchRow("ai.enable", "ai.enable.h", _cfg.AiEnabled, _tip) { Margin = new Padding(0, 0, 0, 10) };
+        sw.Toggled += on => { _cfg.AiEnabled = on; Queue("AiEnabled", on ? "true" : "false"); };
+        var key = new KeyCard(_tip) { Margin = new Padding(0, 0, 0, 10) };
+        _aiCard = new AiStatusCard { Margin = new Padding(0, 0, 0, 10) };
+        foreach (var c in new Control[] { note, sw, key, _aiCard })
+        {
+            flow.Controls.Add(c);
+            rows.Add(c);
+            c.MouseEnter += (_, _) => flow.Focus();
+        }
+        _relang.Add(() => { note.Relang(); sw.Relang(); key.Relang(); _aiCard?.Invalidate(); });
+    }
+
     private void FitRows()
     {
         foreach (var (flow, rows) in _flows)
@@ -804,7 +1075,7 @@ internal sealed class MainForm : Form
             var w = flow.ClientSize.Width - (int)(6 * Theme.K(flow));
             if (w < 100) continue;
             w = Math.Min(w, (int)(980 * Theme.K(flow)));
-            foreach (var r in rows) r.Width = w;
+            foreach (var r in rows) { r.Width = w; if (r is NoteCard nc) nc.Fit(); }
         }
     }
 
@@ -858,21 +1129,51 @@ internal sealed class MainForm : Form
 
     // ------------------------------------------------------------ autostart
 
+    private const string TaskName = "LegionChromaFlow";
     private string StartupLink => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Startup), "LegionChromaFlow.lnk");
 
-    private bool AutostartEnabled() => File.Exists(StartupLink);
+    private static int RunHidden(string file, string args)
+    {
+        try
+        {
+            using var p = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(file, args)
+            { CreateNoWindow = true, UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true });
+            if (p is null) return -1;
+            p.StandardOutput.ReadToEnd(); p.StandardError.ReadToEnd();
+            p.WaitForExit(8000);
+            return p.HasExited ? p.ExitCode : -1;
+        }
+        catch { return -1; }
+    }
 
+    private bool AutostartEnabled() => RunHidden("schtasks.exe", $"/Query /TN {TaskName}") == 0 || File.Exists(StartupLink);
+
+    /// <summary>
+    /// Autostart through a logon scheduled task: unlike the Startup folder it is not subject to the
+    /// Windows startup delay, so the lights come up right after sign-in.
+    /// </summary>
     private void SetAutostart(bool on)
     {
         try
         {
-            if (!on) { if (File.Exists(StartupLink)) File.Delete(StartupLink); return; }
-            dynamic sh = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell")!)!;
-            var l = sh.CreateShortcut(StartupLink);
-            l.TargetPath = "wscript.exe";
-            l.Arguments = $"\"{Path.Combine(_paths.Root, "run-hidden.vbs")}\"";
-            l.WorkingDirectory = _paths.Root;
-            l.Save();
+            if (File.Exists(StartupLink)) File.Delete(StartupLink);
+            if (!on) { RunHidden("schtasks.exe", $"/Delete /TN {TaskName} /F"); return; }
+
+            var user = System.Security.SecurityElement.Escape($"{Environment.UserDomainName}\\{Environment.UserName}");
+            var root = System.Security.SecurityElement.Escape(_paths.Root);
+            var xml = $@"<?xml version=""1.0"" encoding=""UTF-16""?>
+<Task version=""1.2"" xmlns=""http://schemas.microsoft.com/windows/2004/02/mit/task"">
+  <RegistrationInfo><Description>Starts LegionChromaFlow (keyboard lighting) at sign-in</Description></RegistrationInfo>
+  <Triggers><LogonTrigger><Enabled>true</Enabled><UserId>{user}</UserId></LogonTrigger></Triggers>
+  <Principals><Principal id=""Author""><UserId>{user}</UserId><LogonType>InteractiveToken</LogonType><RunLevel>LeastPrivilege</RunLevel></Principal></Principals>
+  <Settings><MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy><DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries><StopIfGoingOnBatteries>false</StopIfGoingOnBatteries><ExecutionTimeLimit>PT0S</ExecutionTimeLimit><StartWhenAvailable>true</StartWhenAvailable></Settings>
+  <Actions Context=""Author""><Exec><Command>wscript.exe</Command><Arguments>""{root}\run-hidden.vbs""</Arguments><WorkingDirectory>{root}</WorkingDirectory></Exec></Actions>
+</Task>";
+            var file = Path.Combine(Path.GetTempPath(), "lcf-task.xml");
+            File.WriteAllText(file, xml, System.Text.Encoding.Unicode);
+            var code = RunHidden("schtasks.exe", $"/Create /TN {TaskName} /XML \"{file}\" /F");
+            try { File.Delete(file); } catch { }
+            if (code != 0) throw new InvalidOperationException($"schtasks exit code {code}");
         }
         catch (Exception ex) { Log.Warn($"Autostart not changed: {ex.Message}"); }
     }
